@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学院文体活动智能助手</title>
+<!-- 引入样式文件 -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <span>学院文体活动助手</span>
+  <div class="tabs">
+    <button id="tab-student" class="active" onclick="switchTab('student')">学生端</button>
+    <button id="tab-teacher" onclick="switchTab('teacher')">老师端</button>
+  </div>
+</header>
+
+<!-- ============ 学生端 ============ -->
+<div class="page active" id="page-student">
+  <div class="card">
+    <h3>告诉我你的空闲时间和兴趣</h3>
+    <label>空闲时间（可多选）</label>
+    <div class="chip-group" id="timeChips">
+      <div class="chip" onclick="toggleChip(this)">周六上午</div>
+      <div class="chip" onclick="toggleChip(this)">周六下午</div>
+      <div class="chip" onclick="toggleChip(this)">周日上午</div>
+      <div class="chip" onclick="toggleChip(this)">周日下午</div>
+    </div>
+    <label>兴趣偏好（可多选）</label>
+    <div class="chip-group" id="interestChips">
+      <div class="chip" onclick="toggleChip(this)">学术讲座</div>
+      <div class="chip" onclick="toggleChip(this)">读书会</div>
+      <div class="chip" onclick="toggleChip(this)">心理团辅</div>
+      <div class="chip" onclick="toggleChip(this)">文体活动</div>
+    </div>
+    <button class="primary" onclick="submitPreference()">获取推荐活动</button>
+  </div>
+
+  <div class="card">
+    <h3>与助手对话</h3>
+    <div id="chat">
+      <div class="msg ai"><div class="bubble">你好，我是学院文体活动助手。你可以先填写上面的时间和兴趣获取推荐，也可以直接问我问题。</div></div>
+    </div>
+    <div id="inputBar" style="margin-top:10px;border-radius:8px;border:1px solid #eee;">
+      <input id="input" type="text" placeholder="输入你的问题…" onkeydown="if(event.key==='Enter') send()">
+      <button onclick="send()">发送</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 老师端 ============ -->
+<div class="page" id="page-teacher">
+  <div class="card">
+    <h3>录入活动信息</h3>
+    <label>活动名称</label>
+    <input type="text" id="act-name" placeholder="如：哲学经典读书会">
+    <label>开始时间</label>
+    <input type="datetime-local" id="act-time">
+    <label>地点</label>
+    <input type="text" id="act-place" placeholder="如：振华楼B107">
+    <label>报名方式</label>
+    <input type="text" id="act-signup" placeholder="如：扫码填表">
+    <label>参与须知</label>
+    <textarea id="act-notice" placeholder="如：需提前阅读指定章节"></textarea>
+    <label>链接（可选）</label>
+    <input type="text" id="act-link" placeholder="https://…">
+    <button class="primary" onclick="submitActivity()">提交活动</button>
+  </div>
+
+  <div class="card">
+    <h3>未解答问题</h3>
+    <div id="questionList">
+      <div style="color:#999;font-size:13px;">加载中…</div>
+    </div>
+    <button class="primary" onclick="loadQuestions()" style="background:#888;">刷新列表</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 引入脚本文件 -->
+<script src="app.js"></script>
+</body>
+</html>
