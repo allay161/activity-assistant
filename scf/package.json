@@ -1,0 +1,16 @@
+{
+  "name": "activity-assistant-scf",
+  "version": "1.0.0",
+  "description": "学院文体活动智能助手 - 腾讯云云函数(Web 函数 + Express) 后端",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
