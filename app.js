@@ -1,9 +1,6 @@
-// ================== 配置区（注意：不要在这里写真实Key） ==================
-const API_KEY = 'xxx'; // 让孙赟替换为你写的 Vercel 后端接口地址，不再直接连百炼
-const APP_ID  = 'xxx';
+// ================== 配置区 ==================
+// 所有密钥（飞书、百炼）都保存在 Cloudflare 环境变量中，前端只请求同域的 /api/* 接口，不再暴露任何 Key。
 // ========================================================
-
-const API_URL = 'https://dashscope.aliyuncs.com/api/v1/apps/' + APP_ID + '/completion';
 
 // ---------- 通用 ----------
 function toast(msg) {
@@ -16,6 +13,7 @@ function switchTab(name) {
   document.querySelectorAll('header .tabs button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'teacher') loadQuestions(); // 进入老师端时自动拉取未解答问题
 }
 function toggleChip(el) { el.classList.toggle('selected'); }
 function getSelected(containerId) {
@@ -36,21 +34,15 @@ function addMsg(text, role) {
 }
 
 async function callAgent(prompt) {
-  const res = await fetch(API_URL, {
+  // 通过后端 /api/chat 代理百炼 / DashScope 请求，前端不持有任何密钥
+  const res = await fetch('/api/chat', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + API_KEY
-    },
-    body: JSON.stringify({
-      input: { prompt: prompt },
-      parameters: {}
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
   });
   const data = await res.json();
-  return data?.output?.text
-      || data?.output?.choices?.[0]?.message?.content
-      || JSON.stringify(data);
+  if (!data.success) throw new Error(data.error || '请求失败');
+  return data.text;
 }
 
 async function send() {
@@ -63,7 +55,14 @@ async function send() {
   try {
     const reply = await callAgent(text);
     last.textContent = reply;
-    // 孙赟注意：在这里判断 reply 中是否包含"已记录"，如果包含，则开启轮询机制
+    // AI 标记该问题需转交老师：自动写入飞书「问题表」
+    if (reply.includes('已记录')) {
+      fetch('/api/add-unanswered', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text })
+      }).catch(() => {});
+    }
   } catch (e) {
     last.textContent = '请求失败：' + e.message;
   }
@@ -99,13 +98,109 @@ async function submitActivity() {
   };
   if (!payload.name || !payload.time) { toast('请填写活动名称和时间'); return; }
   
-  // 孙赟注意：此处需要改成 fetch 请求你写的 Vercel 后端接口，将 payload 发送过去
-  console.log('准备提交活动给后端：', payload);
-  toast('活动已提交（等待对接后端接口）');
+  try {
+    const res = await fetch('/api/add-activity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.success) {
+      toast('活动已提交成功');
+      ['act-name', 'act-time', 'act-place', 'act-signup', 'act-notice', 'act-link']
+        .forEach(id => { document.getElementById(id).value = ''; });
+    } else {
+      toast('提交失败：' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    toast('请求失败：' + e.message);
+  }
 }
 
 async function loadQuestions() {
   const list = document.getElementById('questionList');
-  list.innerHTML = '<div style="color:#999;font-size:13px;">演示阶段：此处应调用后端API读取未解答问题</div>';
-  // 孙赟注意：此处需要发请求拉取未解答问题，并循环渲染出输入框
+  list.innerHTML = '<div style="color:#999;font-size:13px;">加载中…</div>';
+  try {
+    const res = await fetch('/api/get-questions');
+    const data = await res.json();
+    if (!data.success) {
+      list.innerHTML = '<div style="color:#c00;">加载失败：' + (data.error || '未知错误') + '</div>';
+      return;
+    }
+    const questions = data.data || [];
+    if (!questions.length) {
+      list.innerHTML = '<div style="color:#999;font-size:13px;">暂无未解答问题 🎉</div>';
+      return;
+    }
+    list.innerHTML = '';
+    questions.forEach(q => {
+      const item = document.createElement('div');
+      item.style.border = '1px solid #eee';
+      item.style.borderRadius = '8px';
+      item.style.padding = '10px';
+      item.style.marginBottom = '10px';
+
+      const meta = document.createElement('div');
+      meta.style.color = '#888';
+      meta.style.fontSize = '12px';
+      meta.textContent = '提问人：' + q.asker;
+
+      const text = document.createElement('div');
+      text.style.margin = '6px 0';
+      text.textContent = q.question;
+
+      const replyInput = document.createElement('input');
+      replyInput.type = 'text';
+      replyInput.placeholder = '输入回复…';
+      replyInput.style.flex = '1';
+      replyInput.style.marginRight = '6px';
+      replyInput.style.padding = '6px';
+      replyInput.style.border = '1px solid #ddd';
+      replyInput.style.borderRadius = '6px';
+
+      const btn = document.createElement('button');
+      btn.textContent = '回复';
+      btn.className = 'primary';
+      btn.style.padding = '6px 12px';
+
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.appendChild(replyInput);
+      row.appendChild(btn);
+
+      btn.addEventListener('click', async () => {
+        const reply = replyInput.value.trim();
+        if (!reply) { toast('请输入回复内容'); return; }
+        btn.disabled = true;
+        try {
+          const r = await fetch('/api/reply-question', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ record_id: q.record_id, reply })
+          });
+          const rd = await r.json();
+          if (rd.success) {
+            toast('已回复，问题标记为已解决');
+            item.remove();
+            if (!list.children.length) {
+              list.innerHTML = '<div style="color:#999;font-size:13px;">暂无未解答问题 🎉</div>';
+            }
+          } else {
+            toast('回复失败：' + (rd.error || '未知错误'));
+            btn.disabled = false;
+          }
+        } catch (e) {
+          toast('请求失败：' + e.message);
+          btn.disabled = false;
+        }
+      });
+
+      item.appendChild(meta);
+      item.appendChild(text);
+      item.appendChild(row);
+      list.appendChild(item);
+    });
+  } catch (e) {
+    list.innerHTML = '<div style="color:#c00;">加载失败：' + e.message + '</div>';
+  }
 }
