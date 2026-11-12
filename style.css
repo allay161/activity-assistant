@@ -6,13 +6,16 @@ header .tabs button.active { background: #fff; color: #18A38C;font-weight: bold;
 .page { flex: 1; overflow-y: auto; padding: 16px; display: none; }
 .page.active { display: block; }
 
-.card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-radius: 16px;box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border: 1px solid rgba(0, 0, 0, 0.04);transition: transform 0.2s ease, box-shadow 0.2s ease;}
+/* 修复了第 15 行的中文分号 */
+.card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border: 1px solid rgba(0, 0, 0, 0.04); transition: transform 0.2s ease, box-shadow 0.2s ease;}
 .card:hover {transform: translateY(-3px); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);}
 .card h3 { font-size: 15px; margin-bottom: 10px; color: #333; }
 label { display: block; font-size: 14px; margin: 10px 0 6px; color: #555; }
 select, input[type=text], input[type=datetime-local], textarea { width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
 textarea { resize: vertical; min-height: 60px; }
-button.primary { width: 100%; margin-top: 12px; padding: 12px; background: #18A38C; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(24, 163, 140, 0.2)；transition: all 0.2s ease;font-weight: 500;}
+
+/* 修复了第 19 行的中文分号 */
+button.primary { width: 100%; margin-top: 12px; padding: 12px; background: #18A38C; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(24, 163, 140, 0.2); transition: all 0.2s ease; font-weight: 500;}
 button.primary:hover {transform: translateY(-2px); box-shadow: 0 6px 12px rgba(24, 163, 140, 0.3); filter: brightness(1.05); }
 button.primary:active { transform: translateY(1px);box-shadow: 0 2px 4px rgba(24, 163, 140, 0.2); }
 .chip-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
@@ -70,4 +73,3 @@ input:focus, textarea:focus {
     border-color: #18A38C; 
     box-shadow: 0 0 0 3px rgba(24, 163, 140, 0.15); 
 }
-
