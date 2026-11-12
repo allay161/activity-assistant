@@ -1,11 +1,12 @@
 // scf/index.js
-// 腾讯云 Web 函数入口（Express）。所有 /api/* 路由集中在此，单函数部署；
-// 同时用 express.static 托管根目录前端静态文件（index.html / style.css / app.js），
-// 访问函数根路径 / 即返回 index.html。
+// 适配腾讯云 CloudBase Run（云托管）的 Express 入口文件。
+// 同时处理 /api/* 接口请求，并托管根目录的前端静态文件。
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
 
+// 引入路由
 const addActivity = require('./routes/addActivity');
 const addUnanswered = require('./routes/addUnanswered');
 const getQuestions = require('./routes/getQuestions');
@@ -14,33 +15,32 @@ const chat = require('./routes/chat');
 
 const app = express();
 
-// CORS 中间件（双重保险：即便前端与后端不同源，/api 调用也能正常跨域）
-app.use(cors());
+// 1. 基础中间件
+app.use(cors()); // 允许跨域请求（防止你前端在本地跑时被拦截）
+app.use(express.json()); // 解析 JSON 格式的请求体
+app.use(express.urlencoded({ extended: true })); // 解析表单数据
 
-app.use(express.json()); // 解析 application/json 请求体
-
-// 统一挂在 /api 下，与前端现有请求路径（/api/add-activity 等）保持一致
+// 2. API 路由挂载
 app.use('/api', addActivity);
 app.use('/api', addUnanswered);
 app.use('/api', getQuestions);
 app.use('/api', replyQuestion);
 app.use('/api', chat);
 
-// 托管前端静态文件：__dirname 是 scf/，父目录即项目根目录（index.html / style.css / app.js 所在处）
-// 访问 / 时会自动返回 index.html。放在 /api 路由之后，避免覆盖 API 路径。
+// 3. 静态文件托管（前端页面）
+// __dirname 是 scf 目录，'..' 代表上一级目录（即项目的根目录，你的 index.html 所在位置）
 const publicDir = path.join(__dirname, '..');
 app.use(express.static(publicDir, { index: 'index.html' }));
 
-// 健康检查（已挪到 /healthz，避免被根路径的 index.html 覆盖）
-app.get('/healthz', (req, res) => res.json({ ok: true, service: 'activity-assistant-scf' }));
+// 4. 健康检查接口
+app.get('/healthz', (req, res) => res.json({ ok: true, service: 'activity-assistant' }));
 
-// Web 函数模式下，腾讯云会 require 本模块并使用导出的 app（无需自行监听）；
-// 本地直接运行时（node index.js）则监听端口，便于本地调试。
-const port = process.env.PORT || 9000;
-if (require.main === module) {
-  app.listen(port, () => {
-    console.log(`activity-assistant SCF listening on port ${port}`);
-  });
-}
+// 5. 启动服务（关键修改！）
+// CloudBase Run 需要程序持续监听端口。去掉了原先的 require.main 判断，强制监听。
+const port = process.env.PORT || 9000; // 如果环境变量没给端口，默认用 9000（和你的截图一致）
+
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Server is running on port ${port}`);
+});
 
 module.exports = app;
