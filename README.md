@@ -9,30 +9,32 @@
 *   **飞书数据中台**：利用飞书多维表格作为轻量级数据库，实现活动数据的动态更新与未解答问题的流转。
 *   **完整闭环**：学生提问 -> AI兜底转交 -> 老师后台回复 -> 飞书状态更新 -> 学生端自动提示。
 
-## 🚀 部署到腾讯云云函数 (SCF · Web 函数 + Express)
+## 🚀 部署到腾讯云 CloudBase 云托管（Express 容器）
 
-后端已重构为腾讯云 **Web 函数**，使用 Express 在**单个函数**内集中处理所有 `/api/*` 路由，代码位于仓库根目录的 `scf/` 文件夹：
+后端部署在腾讯云 **云开发 CloudBase → 云托管（容器）**，使用 Express 在**单个服务**内集中处理所有 `/api/*` 路由，同时托管前端静态页。代码位于仓库根目录：
 
 | 文件 | 路由 | 说明 |
 | --- | --- | --- |
-| `scf/index.js` | （入口） | Express 应用，挂载下面所有路由，监听 9000 端口 |
+| `scf/index.js` | （入口） | Express 应用，挂载下面所有路由，`listen(9000, '0.0.0.0')` 常驻；并用 `express.static` 托管根目录前端文件，访问 `/` 返回 `index.html` |
+| `Dockerfile` | — | 基于 `node:18-alpine`，安装生产依赖、暴露 9000 端口、`CMD node scf/index.js` |
 | `scf/feishu.js` | — | 获取飞书 `tenant_access_token` |
 | `scf/routes/addActivity.js` | `POST /api/add-activity` | 老师端录入活动，写入飞书「活动表」（状态=已发布） |
 | `scf/routes/addUnanswered.js` | `POST /api/add-unanswered` | 学生提问兜底，写入飞书「问题表」（状态=未解决） |
 | `scf/routes/getQuestions.js` | `GET /api/get-questions` | 老师端拉取「未解决」问题列表 |
 | `scf/routes/replyQuestion.js` | `POST /api/reply-question` | 老师端回复问题，飞书状态改为「已解决」并写入「老师回复」 |
 | `scf/routes/chat.js` | `POST /api/chat` | 安全代理百炼 / DashScope，前端不再暴露密钥 |
+| `GET /healthz` | — | 健康检查，返回 `{"ok":true,...}` |
 
-> 注意：腾讯云 SCF 通过 **`process.env`** 注入环境变量（与本地 Node 一致），代码里用 `process.env.变量名` 读取；处理函数入口为 Express 的 `req/res`，不再是 Cloudflare 的 `context`。
+> 注意：CloudBase 云托管通过 **`process.env`** 注入环境变量（与本地 Node 一致），代码里用 `process.env.变量名` 读取。服务需持续监听 `0.0.0.0:9000`（`index.js` 已去掉 `require.main` 判断，强制监听），由平台路由到容器端口。后端还开启了 `cors` 中间件（双重保险）。
 
 ### 部署步骤（腾讯云控制台）
-1. 进入 **云函数 SCF → 新建 → Web 函数**，运行环境选 **Node.js 18 及以上**（自带 `fetch`）。
-2. **上传整个项目根目录**（而不是只上传 `scf/`）。后端代码在 `scf/`，前端静态文件 `index.html` / `style.css` / `app.js` 在根目录——两者都要一起上传；函数入口（执行文件）填写 **`scf/index.js`**。该入口会用 `path.join(__dirname, '..')` 定位到项目根目录，从而用 `express.static` 直接托管这些前端文件，**访问函数根路径 `/` 即返回 `index.html`**。
-3. 在函数 **函数管理 → 函数配置 → 环境变量** 中配置下方 7 个变量（注意勾选环境变量持久化）。
-4. 保存并测试：访问函数生成的 URL，例如 `GET <你的域名>/api/get-questions` 应返回 JSON；直接访问 `<你的域名>/` 应返回前端页面。
-5. 绑定自定义域名 / HTTPS 在 **API 网关** 处操作。后端已开启 `cors` 中间件（双重保险）：即使前端与后端不同源，`/api/*` 也能跨域调用；若前端与后端同域（都走这个函数），则静态页面与 API 天然同源，CORS 不会触发。
+1. 进入 **云开发 CloudBase → 你的环境 → 云托管 → 新建服务**。
+2. 部署方式选 **上传代码包（ZIP）**，上传**整个项目根目录**的压缩包（包含 `index.html` / `style.css` / `app.js` / `Dockerfile` / `scf/`；**不要**包含 `node_modules/`、`.git/`、`.workbuddy/`）。平台会按根目录的 `Dockerfile` 构建镜像并启动 `node scf/index.js`。
+3. 在 **云托管服务 → 服务配置 → 环境变量** 中配置下方 7 个变量（注意持久化 / 勾选后重新部署）。
+4. 保存并等待部署完成，测试：访问 `<服务公网域名>/healthz` 应返回 JSON；`<域名>/` 返回前端页面；`GET <域名>/api/get-questions` 返回 JSON。
+5. 绑定自定义域名 / HTTPS 在 **云托管 → 访问服务 / 域名管理** 处操作。前端 `app.js` 中 `BASE_URL` 目前为空字符串（前后端同域）；若前端另处部署需跨域，改为后端域名即可（CORS 已开启）。
 
-### 需要在函数配置里配置的环境变量
+### 需要在服务配置里配置的环境变量
 
 | 变量名 | 作用 | 备注 |
 | --- | --- | --- |
@@ -45,7 +47,7 @@
 | `BAILIAN_APP_ID` | 百炼 / DashScope 应用 ID | DashScope 补全接口 URL 中的 `{app_id}`（`chat.js` 使用） |
 
 ### 本地调试
-在 `scf/` 目录下 `npm install` 安装 express，再设置环境变量后 `npm start`（监听 9000）：
+在 `scf/` 目录下 `npm install` 安装依赖，再设置环境变量后 `npm start`（监听 9000）：
 ```bash
 cd scf && npm install
 FEISHU_APP_ID=xxx FEISHU_APP_SECRET=xxx FEISHU_APP_TOKEN=xxx \
@@ -53,3 +55,5 @@ FEISHU_TABLE_Q=xxx FEISHU_TABLE_A=xxx BAILIAN_API_KEY=xxx BAILIAN_APP_ID=xxx \
 npm start
 # 另开终端测试：curl http://localhost:9000/api/get-questions
 ```
+
+> 📘 完整交接资料见根目录《项目交付手册.md》（架构、环境变量、日常维护、故障排查 Q&A）。
