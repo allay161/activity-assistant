@@ -1,4 +1,3 @@
-// scf/routes/addUnanswered.js  ->  POST /api/add-unanswered
 const express = require('express');
 const router = express.Router();
 const { getTenantToken } = require('../feishu');
@@ -18,7 +17,7 @@ router.post('/add-unanswered', async (req, res) => {
       body: JSON.stringify({
         fields: {
           "提问内容": question,
-          "提问人": asker || "匿名学生",
+          // "提问人": asker || "匿名学生",   // ← 飞书表建好"提问人"文本列后取消本行注释
           "状态": "未解决"
         }
       })
