@@ -1,5 +1,5 @@
 // ================== 配置区（注意：不要在这里写真实Key） ==================
-// 后端接口基础地址：吕晨萱的后端已部署（腾讯云 CloudBase Run），
+// 后端接口基础地址：吕晨萱的后端已部署（腾讯云 CloudBase 云托管），
 // 2026-11-09 孙赟联调实测通过（get-questions / reply-question / chat 正常）。
 const BASE_URL = '';
 
@@ -18,10 +18,8 @@ const API_URL = 'https://dashscope.aliyuncs.com/api/v1/apps/' + APP_ID + '/compl
 // 老师端固定口令（结项验收阶段使用；二期接入学校统一身份认证后废弃）
 const TEACHER_PASSCODE = 'whu2026';
 
-// 任务1 的写入责任方开关（2026-11-09 联调已实测：智能体回复里说"已记录"但并【没有】写飞书问题表，
-// 老师端列表看不到，所以写库必须由前端负责，此开关保持 true）
-//   true  = 前端负责写入（当前实现，AI 回复含"已记录"时前端 POST）
-//   false = 若日后改由智能体工作流自己写库时置 false，否则同一个问题会被写两条，老师端列表重复
+// 任务1 的写入责任方开关（联调实测：智能体回复"已记录"但没写飞书问题表，
+// 所以写库必须由前端负责，此开关保持 true）
 const ENABLE_FRONTEND_UNANSWERED_RECORD = true;
 
 // ---------- 通用 ----------
@@ -30,22 +28,69 @@ function toast(msg) {
   t.textContent = msg; t.style.display = 'block';
   setTimeout(() => t.style.display = 'none', 2000);
 }
-function switchTab(name) {
-  // 任务5：老师端固定口令验证
-  // sessionStorage 会话级记忆：验证通过后本次会话（标签页不关）不再重复询问
-  if (name === 'teacher' && !sessionStorage.getItem('teacherVerified')) {
-    const pwd = prompt('请输入教师验证码：');
-    if (pwd === null) return; // 用户点了取消，静默返回，不弹"验证码错误"
-    if (pwd !== TEACHER_PASSCODE) { alert('验证码错误！'); return; }
-    sessionStorage.setItem('teacherVerified', 'true');
-    // 首次进入老师端，自动加载未解答问题列表
-    loadQuestions();
+
+// ========== 导航：角色切换（学生端 / 老师端） ==========
+// 学生端展示三 Tab 主导航；老师端展示后台页面。
+function switchRole(name) {
+  const nav = document.getElementById('mainNav');
+  const mainPages = document.querySelectorAll('.main-page');
+  const teacherPage = document.getElementById('page-teacher');
+
+  document.getElementById('tab-student').classList.toggle('active', name === 'student');
+  document.getElementById('tab-teacher').classList.toggle('active', name === 'teacher');
+
+  if (name === 'teacher') {
+    // 老师端口令验证（sessionStorage 会话级记忆，验证通过后本次会话不再重复询问）
+    if (!sessionStorage.getItem('teacherVerified')) {
+      const pwd = prompt('请输入教师验证码：');
+      if (pwd === null) return; // 点了取消，静默返回
+      if (pwd !== TEACHER_PASSCODE) {
+        alert('验证码错误！');
+        document.getElementById('tab-student').classList.add('active');
+        document.getElementById('tab-teacher').classList.remove('active');
+        return;
+      }
+      sessionStorage.setItem('teacherVerified', 'true');
+    }
+    nav.style.display = 'none';
+    mainPages.forEach(p => p.classList.remove('active'));
+    teacherPage.classList.add('active');
+    loadQuestions(); // 首次进入老师端，自动加载未解答问题
+  } else {
+    nav.style.display = 'flex';
+    teacherPage.classList.remove('active');
+    // 回到学生端时恢复当前主 Tab（默认 chat）；聊天 DOM 一直都在，记录不会丢
+    switchMainTab(currentMainTab, false);
   }
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('header .tabs button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  document.getElementById('tab-' + name).classList.add('active');
 }
+
+// ========== 导航：主 Tab 切换（智能问答 / 活动时间表 / 往期回顾） ==========
+let currentMainTab = 'chat';
+
+function switchMainTab(name, refetch = true) {
+  currentMainTab = name;
+  document.querySelectorAll('.main-page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.main-nav button').forEach(b => b.classList.remove('active'));
+  const page = document.getElementById('page-' + name);
+  const navBtn = document.getElementById('nav-' + name);
+  if (page) page.classList.add('active');
+  if (navBtn) navBtn.classList.add('active');
+
+  // 需求：切换 Tab 时自动重新拉取一次最新活动数据
+  if (refetch) {
+    loadActivities().then(() => {
+      if (name === 'timeline') renderTimeline();
+      if (name === 'review') renderReview();
+    });
+  }
+}
+
+// 兼容旧调用（若别处仍调用 switchTab）
+function switchTab(name) {
+  if (name === 'teacher') switchRole('teacher');
+  else switchMainTab(name === 'student' ? 'chat' : name);
+}
+
 function toggleChip(el) { el.classList.toggle('selected'); }
 function getSelected(containerId) {
   return Array.from(document.querySelectorAll('#' + containerId + ' .chip.selected')).map(c => c.textContent);
@@ -65,8 +110,7 @@ function addMsg(text, role) {
 }
 
 // 老师端写接口统一带上当前会话口令，供后端做最基本的校验。
-// 注意：这只是提高门槛，不是安全机制——口令本身在前端源码里可见，
-// 真正的权限边界在后端（后端不校验也不影响功能，只是防不住乱写）。
+// 注意：这只是提高门槛，不是安全机制——真正的权限边界在后端。
 function teacherHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -83,15 +127,14 @@ async function callAgent(prompt) {
       body: JSON.stringify({ prompt: prompt })
     });
     const data = await res.json();
-    // 真实后端返回 {success, text}；同时兼容约定过的 {reply}，换后端也不怕
+    // 真实后端返回 {success, text}；同时兼容约定过的 {reply}
     if (data && data.success === false) throw new Error(data.error || '后端返回失败');
     const reply = data && (data.reply || data.text);
     if (!reply) throw new Error((data && data.error) || '后端未返回 reply/text');
     return reply;
   }
 
-  // 分支二：直连百炼（现状）。Key 还是占位值时给出可读提示，
-  // 避免队友打开页面看到一串 401 原始 JSON 就以为交付没做完。
+  // 分支二：直连百炼。Key 还是占位值时给出可读提示
   if (API_KEY === 'xxx' || APP_ID === 'xxx') {
     throw new Error('学生端对话未接通：API_KEY/APP_ID 仍是占位值；或把 USE_PROXY_CHAT 改为 true 走后端 /api/chat');
   }
@@ -112,12 +155,7 @@ async function callAgent(prompt) {
       || JSON.stringify(data);
 }
 
-// 任务1：判断 AI 回复是否属于"无法回答、已记录"类
-// 命中则把学生原话静默写入飞书"未解答问题表"（不弹窗，AI 本身已经回复了"已记录"）
-//
-// 两个前置判断：
-//   1) 开关关闭时直接返回（写库责任方若交给智能体工作流，避免重复写两条）
-//   2) 同一会话内问过完全一样的问题，不重复写库（去重只保留最近 3 条，会话级）
+// AI 回复含"已记录/稍后回复"时，把学生原话静默写入飞书未解答问题表
 function maybeRecordUnanswered(question, reply) {
   if (!ENABLE_FRONTEND_UNANSWERED_RECORD) return;
   if (!reply || (!reply.includes('已记录') && !reply.includes('稍后回复'))) return;
@@ -137,8 +175,10 @@ function maybeRecordUnanswered(question, reply) {
   }).catch(() => { /* 落库失败不打断对话，静默处理 */ });
 }
 
-async function send() {
-  const text = input.value.trim();
+// 真正的发送逻辑。传入 text 则直接发送（快捷胶囊用）；不传则从输入框取。
+async function sendMessage(text) {
+  if (typeof text !== 'string') text = input.value.trim();
+  text = String(text).trim();
   if (!text) return;
   addMsg(text, 'user');
   input.value = '';
@@ -147,13 +187,18 @@ async function send() {
   try {
     const reply = await callAgent(text);
     last.textContent = reply;
-    // 任务1：AI 回复含"已记录/稍后回复"时，把学生原话写入未解答问题表
     maybeRecordUnanswered(text, reply);
   } catch (e) {
     last.textContent = '请求失败：' + e.message;
   }
   chat.scrollTop = chat.scrollHeight;
 }
+
+// 输入框发送按钮 / 回车
+function send() { return sendMessage(); }
+
+// 快捷问题胶囊：点击后作为一条消息直接发出
+function quickAsk(text) { return sendMessage(text); }
 
 async function submitPreference() {
   const times = getSelected('timeChips');
@@ -166,7 +211,6 @@ async function submitPreference() {
   try {
     const reply = await callAgent(prompt);
     last.textContent = reply;
-    // 任务1：推荐场景同样需要兜底拦截
     maybeRecordUnanswered(prompt, reply);
   } catch (e) {
     last.textContent = '请求失败：' + e.message;
@@ -175,15 +219,12 @@ async function submitPreference() {
 }
 
 // ---------- 老师端 ----------
-// 任务2：老师录入活动，提交给后端写入飞书"活动信息表"
 async function submitActivity() {
   const timeRaw = document.getElementById('act-time').value; // YYYY-MM-DDTHH:mm，不含时区
   const payload = {
     name: document.getElementById('act-name').value,
     time: timeRaw,
-    // 毫秒时间戳：datetime-local 的值不带时区，后端若直接 new Date(time) 会按"服务器本地时区"
-    // 解析，而 Vercel 的 Node 跑在 UTC → 飞书里的活动时间会整体差 8 小时。
-    // 请后端优先使用 time_ts，time 只作原样展示的兜底。
+    // 毫秒时间戳：请后端优先使用 time_ts
     time_ts: timeRaw ? new Date(timeRaw).getTime() : '',
     place: document.getElementById('act-place').value,
     signup: document.getElementById('act-signup').value,
@@ -192,10 +233,9 @@ async function submitActivity() {
   };
   if (!payload.name || !payload.time) { toast('请填写活动名称和时间'); return; }
 
-  // 按文案定位提交按钮（不依赖卡片顺序，UI 同学调整布局也不会错抓成"刷新列表"）
   const btn = Array.from(document.querySelectorAll('#page-teacher button'))
     .find(b => b.textContent.includes('提交活动'));
-  if (btn) { btn.disabled = true; btn.textContent = '提交中…'; } // 防重复提交
+  if (btn) { btn.disabled = true; btn.textContent = '提交中…'; }
   try {
     const res = await fetch(BASE_URL + '/api/add-activity', {
       method: 'POST',
@@ -205,14 +245,9 @@ async function submitActivity() {
     const data = await res.json();
     if (data.success) {
       toast('活动提交成功！');
-      document.getElementById('act-name').value = '';
-      document.getElementById('act-time').value = '';
-      document.getElementById('act-place').value = '';
-      document.getElementById('act-signup').value = '';
-      document.getElementById('act-notice').value = '';
-      document.getElementById('act-link').value = '';
+      ['act-name','act-time','act-place','act-signup','act-notice','act-link'].forEach(id => document.getElementById(id).value = '');
+      activitiesCache = null; // 活动数据变了，清缓存
     } else {
-      // 后端失败时把具体原因带出来（联调期飞书写入失败能看到 msg，上线后也不误导用户）
       const detail = (data.data && data.data.msg) || data.error || '请检查网络';
       toast('提交失败：' + detail);
     }
@@ -223,10 +258,9 @@ async function submitActivity() {
   }
 }
 
-// 任务3：拉取飞书"未解答问题表"并渲染列表
-// 注意：学生提问文本用 textContent 渲染（防 HTML 注入），不要用 innerHTML 拼接
 async function loadQuestions() {
   const list = document.getElementById('questionList');
+  if (!list) return;
   list.innerHTML = '<div style="color:#999;font-size:13px;">加载中...</div>';
   let data;
   try {
@@ -237,12 +271,10 @@ async function loadQuestions() {
     return;
   }
   if (!data.success) {
-    // 真实后端飞书写入失败时会返回 success:false + data.error（飞书原始错误），一并展示方便定位
     const detail = (data.data && data.data.msg) || data.error || '';
     list.innerHTML = '<div style="color:#c00;font-size:13px;">加载失败，请稍后再试' + (detail ? '：' + detail : '') + '</div>';
     return;
   }
-  // 兼容两种返回结构：真实后端 {data:[{record_id,question,asker}]}；原约定 {items:[{record_id,fields:{...}}]}
   const items = data.items || data.data || [];
   if (!items.length) {
     list.innerHTML = '<div style="color:#999;font-size:13px;">暂无未解答问题</div>';
@@ -253,48 +285,29 @@ async function loadQuestions() {
     const qId = item.record_id;
     const qText = (item.fields && item.fields['提问内容']) || item.question || '（无提问内容）';
     const qAsker = item.asker || (item.fields && item.fields['提问人']) || '';
-    // 提问时间/提问人：后端返回了就显示，没返回就整行不渲染（不影响功能）
     const qTime = item.created_at || (item.fields && item.fields['提问时间']) || '';
     const meta = [qAsker ? '提问人：' + qAsker : '', qTime].filter(Boolean).join(' · ');
 
     const box = document.createElement('div');
-    box.style.cssText = 'margin-bottom:15px;border-bottom:1px solid #eee;padding-bottom:10px;';
-
+    box.className = 'q-item';
     const title = document.createElement('div');
-    title.style.cssText = 'font-weight:bold;margin-bottom:8px;';
-    title.textContent = qText; // 安全渲染，防止注入
-
+    title.className = 'q-text'; title.textContent = qText;
+    const metaEl = document.createElement('div');
+    metaEl.className = 'q-meta'; metaEl.textContent = meta;
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:8px;';
-
+    row.className = 'q-reply';
     const inputEl = document.createElement('input');
-    inputEl.type = 'text';
-    inputEl.id = 'reply-input-' + qId;
-    inputEl.placeholder = '输入回复...';
-    inputEl.style.flex = '1';
-    inputEl.style.padding = '5px';
-
+    inputEl.type = 'text'; inputEl.id = 'reply-input-' + qId; inputEl.placeholder = '输入回复...';
     const btn = document.createElement('button');
     btn.textContent = '提交回复';
-    btn.style.padding = '5px 10px';
     btn.addEventListener('click', () => submitReply(qId, btn));
-
-    row.appendChild(inputEl);
-    row.appendChild(btn);
-    box.appendChild(title);
-    if (meta) {
-      const metaEl = document.createElement('div');
-      metaEl.style.cssText = 'color:#999;font-size:12px;margin-bottom:6px;';
-      metaEl.textContent = meta; // 同样走 textContent，后端返回什么都当纯文本
-      box.appendChild(metaEl);
-    }
-    box.appendChild(row);
+    row.appendChild(inputEl); row.appendChild(btn);
+    if (meta) box.appendChild(metaEl);
+    box.appendChild(title); box.appendChild(row);
     list.appendChild(box);
   });
 }
 
-// 任务4：老师提交回复，后端更新飞书状态为"已解决"，成功后刷新列表
-// btn 由 loadQuestions 传入，用于提交期间置灰，避免连点重复 POST
 async function submitReply(recordId, btn) {
   const inputEl = document.getElementById('reply-input-' + recordId);
   const replyText = inputEl ? inputEl.value.trim() : '';
@@ -307,14 +320,205 @@ async function submitReply(recordId, btn) {
       body: JSON.stringify({ record_id: recordId, reply: replyText })
     });
     const data = await res.json();
-    if (data.success) {
-      toast('回复成功！');
-      loadQuestions(); // 刷新列表，已回复的自动消失（列表重建后 btn 已脱离文档，无需恢复文案）
-      return;
-    }
+    if (data.success) { toast('回复成功！'); loadQuestions(); return; }
     toast('回复失败，请重试');
   } catch (e) {
     toast('回复失败，请重试');
   }
   if (btn) { btn.disabled = false; btn.textContent = '提交回复'; }
 }
+
+// ============================================================
+// ============ 活动数据：拉取 / 时间轴 / 往期回顾 ============
+// ============================================================
+
+let activitiesCache = null; // 简易缓存，避免同一会话内重复请求
+
+// 拉取全部活动（GET /api/get-activities）
+async function loadActivities(force = true) {
+  if (!force && activitiesCache) return activitiesCache;
+  try {
+    const res = await fetch(BASE_URL + '/api/get-activities');
+    const data = await res.json();
+    const list = (data && data.success && Array.isArray(data.data)) ? data.data : [];
+    activitiesCache = list;
+    return list;
+  } catch (e) {
+    console.error('加载活动失败：', e);
+    return activitiesCache || [];
+  }
+}
+
+// 根据活动名称推断分类图标（讲座🎓、文体🏀、读书📖、志愿🤝）
+function guessCategory(name) {
+  const n = name || '';
+  if (/讲座|论坛|学术|报告|沙龙|研讨|课/.test(n)) return { icon: '🎓', label: '讲座' };
+  if (/读书|阅读|书会|书评/.test(n)) return { icon: '📖', label: '读书' };
+  if (/志愿|公益|服务|义工|献爱心|环保/.test(n)) return { icon: '🤝', label: '志愿' };
+  if (/体育|运动|球|比赛|篮球|足球|跑步|文体|晚会|文艺|歌唱|舞蹈/.test(n)) return { icon: '🏀', label: '文体' };
+  return { icon: '📌', label: '活动' };
+}
+
+// 生成活动卡片 DOM（时间轴页与往期页复用）
+function buildActivityCard(a, { past = false } = {}) {
+  const cat = guessCategory(a.name);
+  const card = document.createElement('div');
+  card.className = past ? 'review-card' : 'activity-card';
+  if (past) {
+    const badge = document.createElement('span');
+    badge.className = 'review-badge';
+    badge.textContent = '已结束';
+    card.appendChild(badge);
+  } else {
+    // 点击卡片展开/收起详情（报名方式、须知、链接）
+    card.addEventListener('click', () => card.classList.toggle('open'));
+  }
+
+  const head = document.createElement('div');
+  head.className = 'ac-head';
+  const icon = document.createElement('div');
+  icon.className = 'ac-icon'; icon.textContent = cat.icon;
+  const title = document.createElement('div');
+  title.className = 'ac-title';
+  const name = document.createElement('div');
+  name.className = 'ac-name'; name.textContent = a.name || '（未命名活动）';
+  const catLabel = document.createElement('div');
+  catLabel.className = 'ac-cat'; catLabel.textContent = cat.label;
+  title.appendChild(name); title.appendChild(catLabel);
+  head.appendChild(icon); head.appendChild(title);
+  card.appendChild(head);
+
+  const meta = document.createElement('div');
+  meta.className = 'ac-meta';
+  const timeStr = past
+    ? `${a.date_display || ''} ${a.time_display || ''}`.trim()
+    : (a.time_display || '时间待定');
+  const parts = [];
+  if (timeStr) parts.push('🕐 ' + timeStr);
+  if (a.place) parts.push('📍 ' + a.place);
+  parts.forEach(t => {
+    const s = document.createElement('span'); s.textContent = t; meta.appendChild(s);
+  });
+  card.appendChild(meta);
+
+  if (past) {
+    // 往期卡片精简展示，仅补一行日期
+    const line = document.createElement('div');
+    line.className = 'ac-line';
+    line.textContent = a.date_display ? '📅 ' + a.date_display : '';
+    if (a.date_display) card.appendChild(line);
+  } else {
+    const detail = document.createElement('div');
+    detail.className = 'ac-detail';
+    if (a.signup) { const d = document.createElement('div'); d.textContent = '报名方式：' + a.signup; detail.appendChild(d); }
+    if (a.notice) { const d = document.createElement('div'); d.textContent = '参与须知：' + a.notice; detail.appendChild(d); }
+    if (a.link) {
+      const link = document.createElement('a');
+      link.href = a.link; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = '🔗 查看活动链接';
+      detail.appendChild(link);
+    }
+    if (!detail.childNodes.length) detail.textContent = '暂无更多详情';
+    card.appendChild(detail);
+  }
+  return card;
+}
+
+// 空状态图（统一美观占位）
+function buildEmptyState(emoji, title, desc) {
+  const box = document.createElement('div');
+  box.className = 'empty-state';
+  const e = document.createElement('span'); e.className = 'empty-emoji'; e.textContent = emoji;
+  const t = document.createElement('div'); t.className = 'empty-title'; t.textContent = title;
+  const d = document.createElement('div'); d.className = 'empty-desc'; d.textContent = desc;
+  box.appendChild(e); box.appendChild(t); box.appendChild(d);
+  return box;
+}
+
+// ---------- 时间轴渲染（核心） ----------
+// 步骤：过滤掉"已结束" → 按开始时间升序 → 按日期分组 → 渲染节点+卡片
+function renderTimeline() {
+  const box = document.getElementById('timelineList');
+  if (!box) return;
+  box.innerHTML = '<div class="loading-state">正在加载活动…</div>';
+
+  const all = activitiesCache || [];
+  // 1) 只保留"已发布"（过滤掉已结束及未知状态）
+  const upcoming = all.filter(a => a.status === '已发布');
+  if (!upcoming.length) {
+    box.innerHTML = '';
+    box.appendChild(buildEmptyState('📭', '暂无进行中的活动', '新的活动发布后会自动出现在这里'));
+    return;
+  }
+
+  // 2) 按开始时间从小到大排序（无时间的排最后）
+  upcoming.sort((x, y) => {
+    const tx = x.start_ts || Number.MAX_SAFE_INTEGER;
+    const ty = y.start_ts || Number.MAX_SAFE_INTEGER;
+    return tx - ty;
+  });
+
+  // 3) 按日期分组（用后端返回 date_display；无则归为"待定"）
+  const groups = [];
+  const map = new Map();
+  upcoming.forEach(a => {
+    const key = a.date_display || '待定';
+    if (!map.has(key)) {
+      const g = { date: key, items: [] };
+      map.set(key, g); groups.push(g);
+    }
+    map.get(key).items.push(a);
+  });
+
+  // 4) 渲染：每个日期一个节点，节点右侧渲染当天所有活动卡片
+  box.innerHTML = '';
+  groups.forEach(g => {
+    const wrap = document.createElement('div');
+    wrap.className = 'timeline-group';
+
+    const dateEl = document.createElement('div');
+    dateEl.className = 'timeline-date';
+    dateEl.textContent = g.date === '待定' ? '时间待定' : formatDateLabel(g.date);
+    wrap.appendChild(dateEl);
+
+    const cards = document.createElement('div');
+    cards.className = 'timeline-cards';
+    g.items.forEach(a => cards.appendChild(buildActivityCard(a, { past: false })));
+    wrap.appendChild(cards);
+
+    box.appendChild(wrap);
+  });
+}
+
+// 把 "12/03" 这类日期显示美化成 "12月03日"（若已是中文格式则原样返回）
+function formatDateLabel(s) {
+  const m = String(s).match(/^(\d{1,2})[.\/-](\d{1,2})$/);
+  if (m) return `${m[1]}月${m[2]}日`;
+  return s;
+}
+
+// ---------- 往期回顾渲染 ----------
+function renderReview() {
+  const box = document.getElementById('reviewGrid');
+  if (!box) return;
+  box.innerHTML = '<div class="loading-state" style="grid-column:1/-1;">正在加载往期活动…</div>';
+
+  const all = activitiesCache || [];
+  const past = all.filter(a => a.status === '已结束');
+  if (!past.length) {
+    box.innerHTML = '';
+    box.appendChild(buildEmptyState('🕰️', '暂无往期活动', '活动结束后会自动归档到这里'));
+    return;
+  }
+  // 按时间倒序（最近的排前面）
+  past.sort((x, y) => (y.start_ts || 0) - (x.start_ts || 0));
+  box.innerHTML = '';
+  past.forEach(a => box.appendChild(buildActivityCard(a, { past: true })));
+}
+
+// ============ 初始化 ============
+// 首屏预拉一次活动，保证数据就绪；切换 Tab 时再强制刷新
+loadActivities().then(() => {
+  renderTimeline();
+  renderReview();
+});

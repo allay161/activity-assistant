@@ -11,45 +11,78 @@
 <header>
   <span>学院文体活动助手</span>
   <div class="tabs">
-    <button id="tab-student" class="active" onclick="switchTab('student')">学生端</button>
-    <button id="tab-teacher" onclick="switchTab('teacher')">老师端</button>
+    <button id="tab-student" class="active" onclick="switchRole('student')">学生端</button>
+    <button id="tab-teacher" onclick="switchRole('teacher')">老师端</button>
   </div>
 </header>
 
-<!-- ============ 学生端 ============ -->
-<div class="page active" id="page-student">
+<!-- ============ 主导航（三 Tab，仅学生端可见） ============ -->
+<nav class="main-nav" id="mainNav">
+  <button id="nav-chat" class="active" onclick="switchMainTab('chat')">✨ 智能问答</button>
+  <button id="nav-timeline" onclick="switchMainTab('timeline')">📅 活动时间表</button>
+  <button id="nav-review" onclick="switchMainTab('review')">🕰️ 往期回顾</button>
+</nav>
+
+<!-- ============ Tab1：智能问答（保留原聊天界面，DOM 常驻不清空） ============ -->
+<div class="main-page active" id="page-chat">
   <div class="card">
     <h3>告诉我你的空闲时间和兴趣</h3>
     <label>空闲时间（可多选）</label>
     <div class="chip-group" id="timeChips">
-      <div class="chip" onclick="toggleChip(this)">周六上午</div>
-      <div class="chip" onclick="toggleChip(this)">周六下午</div>
-      <div class="chip" onclick="toggleChip(this)">周日上午</div>
-      <div class="chip" onclick="toggleChip(this)">周日下午</div>
+      <div class="chip" onclick="toggleChip(this)">工作日晚上</div>
+      <div class="chip" onclick="toggleChip(this)">周末上午</div>
+      <div class="chip" onclick="toggleChip(this)">周末下午</div>
+      <div class="chip" onclick="toggleChip(this)">周末晚上</div>
     </div>
     <label>兴趣偏好（可多选）</label>
     <div class="chip-group" id="interestChips">
-      <div class="chip" onclick="toggleChip(this)">学术讲座</div>
-      <div class="chip" onclick="toggleChip(this)">读书会</div>
-      <div class="chip" onclick="toggleChip(this)">心理团辅</div>
-      <div class="chip" onclick="toggleChip(this)">文体活动</div>
+      <div class="chip" onclick="toggleChip(this)">讲座🎓</div>
+      <div class="chip" onclick="toggleChip(this)">文体🏀</div>
+      <div class="chip" onclick="toggleChip(this)">读书📖</div>
+      <div class="chip" onclick="toggleChip(this)">志愿🤝</div>
     </div>
     <button class="primary" onclick="submitPreference()">获取推荐活动</button>
   </div>
 
-  <div class="card">
+  <div class="card chat-card">
     <h3>与助手对话</h3>
     <div id="chat">
       <div class="msg ai"><div class="bubble">你好，我是学院文体活动助手。你可以先填写上面的时间和兴趣获取推荐，也可以直接问我问题。</div></div>
     </div>
-    <div id="inputBar" style="margin-top:10px;border-radius:8px;border:1px solid #eee;">
+    <div class="quick-asks" id="quickAsks">
+      <button type="button" class="quick-chip" onclick="quickAsk('本周有讲座吗？')">本周有讲座吗？</button>
+      <button type="button" class="quick-chip" onclick="quickAsk('有什么体育比赛？')">有什么体育比赛？</button>
+      <button type="button" class="quick-chip" onclick="quickAsk('近期有哪些读书会？')">近期有哪些读书会？</button>
+      <button type="button" class="quick-chip" onclick="quickAsk('有志愿活动吗？')">有志愿活动吗？</button>
+    </div>
+    <div id="inputBar" style="margin-top:10px;">
       <input id="input" type="text" placeholder="输入你的问题…" onkeydown="if(event.key==='Enter') send()">
       <button onclick="send()">发送</button>
     </div>
   </div>
 </div>
 
-<!-- ============ 老师端 ============ -->
+<!-- ============ Tab2：活动时间表（时间轴） ============ -->
+<div class="main-page" id="page-timeline">
+  <div class="page-head">
+    <h3>📅 活动时间表</h3>
+  </div>
+  <div id="timelineList" class="timeline-list">
+    <div class="loading-state">正在加载活动…</div>
+  </div>
+</div>
+
+<!-- ============ Tab3：往期回顾（网格） ============ -->
+<div class="main-page" id="page-review">
+  <div class="page-head">
+    <h3>🕰️ 往期回顾</h3>
+  </div>
+  <div id="reviewGrid" class="review-grid">
+    <div class="loading-state">正在加载往期活动…</div>
+  </div>
+</div>
+
+<!-- ============ 老师端（角色页，独立于三 Tab） ============ -->
 <div class="page" id="page-teacher">
   <div class="card">
     <h3>录入活动信息</h3>
@@ -73,7 +106,7 @@
     <div id="questionList">
       <div style="color:#999;font-size:13px;">加载中…</div>
     </div>
-    <button class="primary" onclick="loadQuestions()" style="background:#888;">刷新列表</button>
+    <button class="primary" onclick="loadQuestions()" style="background:#94a3b8;">刷新列表</button>
   </div>
 </div>
 

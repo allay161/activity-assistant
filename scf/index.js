@@ -10,6 +10,7 @@ const cors = require('cors');
 const addActivity = require('./routes/addActivity');
 const addUnanswered = require('./routes/addUnanswered');
 const getQuestions = require('./routes/getQuestions');
+const getActivities = require('./routes/getActivities');
 const replyQuestion = require('./routes/replyQuestion');
 const chat = require('./routes/chat');
 
@@ -24,6 +25,7 @@ app.use(express.urlencoded({ extended: true })); // 解析表单数据
 app.use('/api', addActivity);
 app.use('/api', addUnanswered);
 app.use('/api', getQuestions);
+app.use('/api', getActivities);
 app.use('/api', replyQuestion);
 app.use('/api', chat);
 
