@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { getTenantToken } = require('../feishu');
+const { buildRecordUrl } = require('../feishuUrl');
 
 // 时间戳 -> 北京时间展示（服务器可能是 UTC，必须显式指定时区）
 function fmtTs(ts) {
@@ -40,6 +41,7 @@ router.get('/get-activities', async (req, res) => {
       const disp = fmtTs(startTs);
       return {
         record_id: it.record_id,
+        feishu_url: buildRecordUrl(it.record_id, process.env.FEISHU_TABLE_A), // 【在飞书打开】→ 活动表对应记录
         name: flat(f["活动名称"]),
         start_ts: startTs,
         date_display: disp.date,   // 如 "12/03"

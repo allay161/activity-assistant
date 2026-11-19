@@ -75,6 +75,23 @@ header .tabs button.active{
 }
 @keyframes navIn{from{transform:scaleX(0);}to{transform:scaleX(1);}}
 
+/* ============ 老师端子板块导航 ============ */
+.teacher-nav{
+  display:flex;gap:6px;margin-bottom:16px;
+  background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:5px;box-shadow:var(--shadow);
+}
+.teacher-nav button{
+  flex:1;position:relative;background:transparent;border:none;
+  padding:10px 6px;font-size:13.5px;color:var(--muted);
+  border-radius:8px;cursor:pointer;transition:all .25s ease;white-space:nowrap;
+}
+.teacher-nav button:hover{color:var(--primary-dark);background:rgba(16,185,129,.06);}
+.teacher-nav button.active{color:#fff;background:var(--primary);font-weight:700;}
+.teacher-nav button.active:hover{background:var(--primary-dark);}
+.teacher-pane{display:none;}
+.teacher-pane.active{display:block;animation:pageIn .3s ease;}
+
 /* ============ 页面容器 ============ */
 .page,.main-page{
   flex:1;overflow-y:auto;
@@ -181,6 +198,21 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   to{opacity:1;transform:none;}
 }
 
+/* "思考中"三个跳动圆点 */
+.bubble.thinking{min-width:52px;}
+.think-dots{display:inline-flex;align-items:center;gap:5px;height:18px;}
+.think-dots i{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--primary);display:inline-block;
+  animation:thinkBounce 1.2s ease-in-out infinite;
+}
+.think-dots i:nth-child(2){animation-delay:.15s;}
+.think-dots i:nth-child(3){animation-delay:.3s;}
+@keyframes thinkBounce{
+  0%,60%,100%{transform:translateY(0);opacity:.35;}
+  30%{transform:translateY(-5px);opacity:1;}
+}
+
 /* ============ 活动时间表（时间轴） ============ */
 .timeline-list{position:relative;padding-left:6px;}
 .timeline-group{position:relative;padding-left:34px;padding-bottom:22px;}
@@ -265,8 +297,27 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
 .empty-state .empty-title{font-size:15px;font-weight:600;color:#9ca3af;}
 .empty-state .empty-desc{font-size:13px;margin-top:6px;color:#b0b7c0;}
 
+/* ============ 老师端·活动管理 ============ */
+.act-item{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border-bottom:1px solid var(--line);padding:11px 0;
+}
+.act-item:last-child{border-bottom:none;}
+.act-info{min-width:0;flex:1;}
+.act-name{font-size:14px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.act-meta{font-size:12px;color:var(--muted);margin-top:4px;}
+.act-open-btn{
+  flex:none;padding:8px 13px;background:var(--primary);color:#fff;
+  border:none;border-radius:8px;font-size:12px;cursor:pointer;
+  transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
+}
+.act-open-btn:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(16,185,129,.3);filter:brightness(1.04);}
+.act-open-btn:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185,129,.3);}
+
 /* ============ 未解答问题 & Toast ============ */
 .q-item{border-bottom:1px solid var(--line);padding:12px 0;}
+.q-resolved{background:rgba(148,163,184,.07);border-radius:10px;padding:12px;border-bottom:none;margin-bottom:8px;}
+.q-resolved .q-text{color:var(--muted);}
 .q-item .q-text{font-size:14px;color:var(--text);margin-bottom:6px;}
 .q-item .q-meta{font-size:12px;color:var(--muted);margin-bottom:8px;}
 .q-item .q-reply{display:flex;gap:8px;}
@@ -276,6 +327,12 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   border:none;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s ease;
 }
 .q-item .q-reply button:hover{filter:brightness(1.08);transform:translateY(-1px);}
+/* 次级操作：在飞书打开（描边样式，区别于实心主按钮） */
+.q-item .q-reply .q-open-btn{
+  flex:none;background:#fff;color:var(--primary);
+  border:1px solid var(--primary);font-size:12px;padding:8px 12px;
+}
+.q-item .q-reply .q-open-btn:hover{background:var(--primary);color:#fff;filter:none;}
 .toast{
   position:fixed;top:24px;left:50%;transform:translateX(-50%);
   background:rgba(31,41,55,.94);color:#fff;padding:11px 22px;

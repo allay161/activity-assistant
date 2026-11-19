@@ -20,8 +20,8 @@
 | `scf/feishu.js` | — | 获取飞书 `tenant_access_token` |
 | `scf/routes/addActivity.js` | `POST /api/add-activity` | 老师端录入活动，写入飞书「活动表」（状态=已发布） |
 | `scf/routes/addUnanswered.js` | `POST /api/add-unanswered` | 学生提问兜底，写入飞书「问题表」（状态=未解决） |
-| `scf/routes/getQuestions.js` | `GET /api/get-questions` | 老师端拉取「未解决」问题列表 |
-| `scf/routes/replyQuestion.js` | `POST /api/reply-question` | 老师端回复问题，飞书状态改为「已解决」并写入「老师回复」 |
+| `scf/routes/getQuestions.js` | `GET /api/get-questions` | 老师端拉取「未解决」问题列表 + 近期「已解决」问题（带回复，可修改） |
+| `scf/routes/replyQuestion.js` | `POST /api/reply-question` | 老师端回复/修改回复，飞书状态改为「已解决」并写入「老师回复」 |
 | `scf/routes/chat.js` | `POST /api/chat` | 安全代理百炼 / DashScope，前端不再暴露密钥 |
 | `GET /healthz` | — | 健康检查，返回 `{"ok":true,...}` |
 
@@ -30,7 +30,7 @@
 ### 部署步骤（腾讯云控制台）
 1. 进入 **云开发 CloudBase → 你的环境 → 云托管 → 新建服务**。
 2. 部署方式选 **上传代码包（ZIP）**，上传**整个项目根目录**的压缩包（包含 `index.html` / `style.css` / `app.js` / `Dockerfile` / `scf/`；**不要**包含 `node_modules/`、`.git/`、`.workbuddy/`）。平台会按根目录的 `Dockerfile` 构建镜像并启动 `node scf/index.js`。
-3. 在 **云托管服务 → 服务配置 → 环境变量** 中配置下方 7 个变量（注意持久化 / 勾选后重新部署）。
+3. 在 **云托管服务 → 服务配置 → 环境变量** 中配置下方 8 个变量（注意持久化 / 勾选后重新部署）。
 4. 保存并等待部署完成，测试：访问 `<服务公网域名>/healthz` 应返回 JSON；`<域名>/` 返回前端页面；`GET <域名>/api/get-questions` 返回 JSON。
 5. 绑定自定义域名 / HTTPS 在 **云托管 → 访问服务 / 域名管理** 处操作。前端 `app.js` 中 `BASE_URL` 目前为空字符串（前后端同域）；若前端另处部署需跨域，改为后端域名即可（CORS 已开启）。
 
@@ -42,7 +42,8 @@
 | `FEISHU_APP_SECRET` | 飞书应用 App Secret | 同上 |
 | `FEISHU_APP_TOKEN` | 飞书多维表格（Bitable）的 app_token | 活动表与问题表共用同一个多维表格应用 |
 | `FEISHU_TABLE_Q` | 「问题表」的 table_id | `addUnanswered` / `getQuestions` / `replyQuestion` 使用 |
-| `FEISHU_TABLE_A` | 「活动表」的 table_id | `addActivity` 使用 |
+| `FEISHU_TABLE_A` | 「活动表」的 table_id | `addActivity` / `getActivities` 使用 |
+| `FEISHU_SHEET_URL` | 活动表与问题表所在的**同一个**多维表格的浏览器链接（含 app_token） | 老师端【在飞书打开】用；从浏览器地址栏复制整条 URL 即可。两张表在同一个多维表格里、只是 table_id 不同，后端会分别用 `FEISHU_TABLE_A` / `FEISHU_TABLE_Q` 覆盖 `table` 参数，并补上 `record` 定位到单条记录。不配置则按钮会提示未配置 |
 | `BAILIAN_API_KEY` | 百炼 / 通义 DashScope API Key | 由 `chat.js` 安全读取并转发到 DashScope（前端已不再直连） |
 | `BAILIAN_APP_ID` | 百炼 / DashScope 应用 ID | DashScope 补全接口 URL 中的 `{app_id}`（`chat.js` 使用） |
 
@@ -51,7 +52,8 @@
 ```bash
 cd scf && npm install
 FEISHU_APP_ID=xxx FEISHU_APP_SECRET=xxx FEISHU_APP_TOKEN=xxx \
-FEISHU_TABLE_Q=xxx FEISHU_TABLE_A=xxx BAILIAN_API_KEY=xxx BAILIAN_APP_ID=xxx \
+FEISHU_TABLE_Q=xxx FEISHU_TABLE_A=xxx FEISHU_SHEET_URL=https://xxx.feishu.cn/base/xxx \
+BAILIAN_API_KEY=xxx BAILIAN_APP_ID=xxx \
 npm start
 # 另开终端测试：curl http://localhost:9000/api/get-questions
 ```

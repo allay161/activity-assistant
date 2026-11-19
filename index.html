@@ -18,9 +18,9 @@
 
 <!-- ============ 主导航（三 Tab，仅学生端可见） ============ -->
 <nav class="main-nav" id="mainNav">
-  <button id="nav-chat" class="active" onclick="switchMainTab('chat')">✨ 智能问答</button>
-  <button id="nav-timeline" onclick="switchMainTab('timeline')">📅 活动时间表</button>
-  <button id="nav-review" onclick="switchMainTab('review')">🕰️ 往期回顾</button>
+  <button id="nav-chat" class="active" onclick="switchMainTab('chat')">智能问答</button>
+  <button id="nav-timeline" onclick="switchMainTab('timeline')">活动时间表</button>
+  <button id="nav-review" onclick="switchMainTab('review')">往期回顾</button>
 </nav>
 
 <!-- ============ Tab1：智能问答（保留原聊天界面，DOM 常驻不清空） ============ -->
@@ -82,31 +82,61 @@
   </div>
 </div>
 
-<!-- ============ 老师端（角色页，独立于三 Tab） ============ -->
+<!-- ============ 老师端（角色页，独立于学生端三 Tab） ============ -->
 <div class="page" id="page-teacher">
-  <div class="card">
-    <h3>录入活动信息</h3>
-    <label>活动名称</label>
-    <input type="text" id="act-name" placeholder="如：哲学经典读书会">
-    <label>开始时间</label>
-    <input type="datetime-local" id="act-time">
-    <label>地点</label>
-    <input type="text" id="act-place" placeholder="如：振华楼B107">
-    <label>报名方式</label>
-    <input type="text" id="act-signup" placeholder="如：扫码填表">
-    <label>参与须知</label>
-    <textarea id="act-notice" placeholder="如：需提前阅读指定章节"></textarea>
-    <label>链接（可选）</label>
-    <input type="text" id="act-link" placeholder="https://…">
-    <button class="primary" onclick="submitActivity()">提交活动</button>
+  <!-- 老师端子板块导航 -->
+  <nav class="teacher-nav" id="teacherNav">
+    <button id="tnav-activity" class="active" onclick="switchTeacherTab('activity')">录入活动</button>
+    <button id="tnav-manage" onclick="switchTeacherTab('manage')">活动管理</button>
+    <button id="tnav-question" onclick="switchTeacherTab('question')">问题回复</button>
+  </nav>
+
+  <!-- 板块1：录入活动 -->
+  <div class="teacher-pane active" id="tpane-activity">
+    <div class="card">
+      <h3>录入活动信息</h3>
+      <label>活动名称</label>
+      <input type="text" id="act-name" placeholder="如：哲学经典读书会">
+      <label>开始时间</label>
+      <input type="datetime-local" id="act-time">
+      <label>地点</label>
+      <input type="text" id="act-place" placeholder="如：振华楼B107">
+      <label>报名方式</label>
+      <input type="text" id="act-signup" placeholder="如：扫码填表">
+      <label>参与须知</label>
+      <textarea id="act-notice" placeholder="如：需提前阅读指定章节"></textarea>
+      <label>链接（可选）</label>
+      <input type="text" id="act-link" placeholder="https://…">
+      <button class="primary" onclick="submitActivity()">提交活动</button>
+    </div>
   </div>
 
-  <div class="card">
-    <h3>未解答问题</h3>
-    <div id="questionList">
-      <div style="color:#999;font-size:13px;">加载中…</div>
+  <!-- 板块2：活动管理（在飞书打开编辑） -->
+  <div class="teacher-pane" id="tpane-manage">
+    <div class="card">
+      <h3>活动管理</h3>
+      <div id="teacherActivityList">
+        <div style="color:#999;font-size:13px;">加载中…</div>
+      </div>
+      <button class="primary" onclick="loadTeacherActivities()" style="background:#94a3b8;">刷新活动</button>
     </div>
-    <button class="primary" onclick="loadQuestions()" style="background:#94a3b8;">刷新列表</button>
+  </div>
+
+  <!-- 板块3：问题回复（待回复 + 近期已回复可修改） -->
+  <div class="teacher-pane" id="tpane-question">
+    <div class="card">
+      <h3>待回复问题</h3>
+      <div id="questionList">
+        <div style="color:#999;font-size:13px;">加载中…</div>
+      </div>
+      <button class="primary" onclick="loadQuestions()" style="background:#94a3b8;">刷新列表</button>
+    </div>
+    <div class="card">
+      <h3>近期已回复</h3>
+      <div id="resolvedList">
+        <div style="color:#999;font-size:13px;">加载中…</div>
+      </div>
+    </div>
   </div>
 </div>
 
