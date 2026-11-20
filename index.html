@@ -140,6 +140,25 @@
   </div>
 </div>
 
+<!-- ============ 教师验证码弹窗（自定义 Modal） ============ -->
+<!-- 为什么不用 prompt()：QQ/微信内置浏览器会拦截原生弹窗，导致点"老师端"无反应。
+     自定义 DOM 元素（div/input/button）不会被任何浏览器拦截，体验一致。 -->
+<div id="passcode-mask" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:22px 20px;width:85%;max-width:320px;box-shadow:0 8px 30px rgba(0,0,0,0.2);">
+    <h3 style="margin:0 0 6px;font-size:17px;">教师验证</h3>
+    <p style="margin:0 0 14px;color:#888;font-size:13px;">请输入教师验证码进入老师端</p>
+    <input type="password" id="passcode-input" placeholder="请输入验证码" autocomplete="off"
+           style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;"
+           onkeydown="if(event.key==='Enter') confirmPasscode(); if(event.key==='Escape') closePasscodeModal();">
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="closePasscodeModal()"
+              style="flex:1;padding:10px 0;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;color:#555;font-size:15px;">取消</button>
+      <button onclick="confirmPasscode()" class="primary"
+              style="flex:1;margin-top:0;padding:10px 0;border:none;border-radius:8px;font-size:15px;">确认</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- 引入脚本文件 -->
