@@ -36,22 +36,18 @@ function switchRole(name) {
   const mainPages = document.querySelectorAll('.main-page');
   const teacherPage = document.getElementById('page-teacher');
 
+  // 老师端口令验证（sessionStorage 会话级记忆，验证通过后本次会话不再重复询问）
+  // 注意：不用 prompt()，QQ/微信内置浏览器会拦截原生弹窗导致点"老师端"没反应，
+  // 改为弹出 index.html 里的自定义 Modal（纯 DOM 元素，不会被拦截）。
+  if (name === 'teacher' && !sessionStorage.getItem('teacherVerified')) {
+    openPasscodeModal();
+    return; // 验证成功后由 confirmPasscode() 重新调用 switchRole('teacher') 进入
+  }
+
   document.getElementById('tab-student').classList.toggle('active', name === 'student');
   document.getElementById('tab-teacher').classList.toggle('active', name === 'teacher');
 
   if (name === 'teacher') {
-    // 老师端口令验证（sessionStorage 会话级记忆，验证通过后本次会话不再重复询问）
-    if (!sessionStorage.getItem('teacherVerified')) {
-      const pwd = prompt('请输入教师验证码：');
-      if (pwd === null) return; // 点了取消，静默返回
-      if (pwd !== TEACHER_PASSCODE) {
-        alert('验证码错误！');
-        document.getElementById('tab-student').classList.add('active');
-        document.getElementById('tab-teacher').classList.remove('active');
-        return;
-      }
-      sessionStorage.setItem('teacherVerified', 'true');
-    }
     nav.style.display = 'none';
     mainPages.forEach(p => p.classList.remove('active'));
     teacherPage.classList.add('active');
@@ -64,6 +60,34 @@ function switchRole(name) {
     switchMainTab(currentMainTab, false);
   }
 }
+
+// ---------- 教师验证弹窗（自定义 Modal，替代 prompt） ----------
+function openPasscodeModal() {
+  const mask = document.getElementById('passcode-mask');
+  const inp = document.getElementById('passcode-input');
+  inp.value = '';
+  mask.style.display = 'flex';
+  // 延迟聚焦，部分安卓 WebView 需要等弹层完成渲染后 focus 才生效
+  setTimeout(() => inp.focus(), 100);
+}
+function closePasscodeModal() {
+  document.getElementById('passcode-mask').style.display = 'none';
+}
+function confirmPasscode() {
+  const pwd = document.getElementById('passcode-input').value;
+  if (pwd === TEACHER_PASSCODE) {
+    sessionStorage.setItem('teacherVerified', 'true');
+    closePasscodeModal();
+    switchRole('teacher'); // 复用正常入口，首次进入会自动加载问题列表和活动列表
+  } else {
+    toast('验证码错误！'); // 用页面内 toast 代替 alert，同样避免被拦截
+  }
+}
+
+// 点遮罩空白处（弹窗卡片以外）视为取消
+document.getElementById('passcode-mask').addEventListener('click', function (e) {
+  if (e.target === this) closePasscodeModal();
+});
 
 // ========== 导航：主 Tab 切换（智能问答 / 活动时间表 / 往期回顾） ==========
 let currentMainTab = 'chat';
