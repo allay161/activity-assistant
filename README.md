@@ -4,10 +4,17 @@
 
 ## 📌 核心功能
 
-*   **学生端**：输入空闲时间与兴趣偏好获取个性化活动推荐；内置 AI 助手，支持基于大模型和飞书实时数据的智能问答。
-*   **老师端**：安全隔离的教师后台，支持一键录入新活动、查看 AI 无法回答的“未解答问题”并进行人工回复。
-*   **飞书数据中台**：利用飞书多维表格作为轻量级数据库，实现活动数据的动态更新与未解答问题的流转。
-*   **完整闭环**：学生提问 -> AI兜底转交 -> 老师后台回复 -> 飞书状态更新 -> 学生端自动提示。
+前端为多标签单页应用，顶部三个 Tab 切换（不刷新、聊天记录保留）：
+
+*   **智能问答**：基于大模型 + 飞书实时数据的 AI 对话，支持空闲时间/兴趣推荐与快捷提问；答不上来的问题自动转交老师。
+*   **活动时间表**：按开始时间排序、按日期分组的时间轴，展示近期活动，并按名称标注分类图标（讲座🎓 / 文体🏀 / 读书📖 / 志愿🤝）。
+*   **往期回顾**：已结束活动的网格卡片，自动置灰归档。
+
+老师端独立入口，分三个板块：
+
+*   **录入活动 / 活动管理 / 问题回复**；支持回复与修改已回复问题的回答，每条活动与问题均可【在飞书打开】直达该记录编辑。
+*   **飞书数据中台**：飞书多维表格（同一 base 下的活动表 + 问题表）作为轻量级数据库，数据改动实时生效。
+*   **完整闭环**：学生提问 → AI 兜底转交（后端语义去重，避免同义问题重复）→ 老师回复 → 飞书状态更新 → 学生端提示。
 
 ## 🚀 部署到腾讯云 CloudBase 云托管（Express 容器）
 
@@ -19,10 +26,12 @@
 | `Dockerfile` | — | 基于 `node:18-alpine`，安装生产依赖、暴露 9000 端口、`CMD node scf/index.js` |
 | `scf/feishu.js` | — | 获取飞书 `tenant_access_token` |
 | `scf/routes/addActivity.js` | `POST /api/add-activity` | 老师端录入活动，写入飞书「活动表」（状态=已发布） |
-| `scf/routes/addUnanswered.js` | `POST /api/add-unanswered` | 学生提问兜底，写入飞书「问题表」（状态=未解决） |
-| `scf/routes/getQuestions.js` | `GET /api/get-questions` | 老师端拉取「未解决」问题列表 + 近期「已解决」问题（带回复，可修改） |
+| `scf/routes/getActivities.js` | `GET /api/get-activities` | 拉取全部活动，供学生端时间轴/往期回顾渲染 |
+| `scf/routes/addUnanswered.js` | `POST /api/add-unanswered` | 学生提问兜底，写入飞书「问题表」（状态=未解决）；写入前做语义去重 |
+| `scf/routes/getQuestions.js` | `GET /api/get-questions` | 老师端拉取「未解决」问题 + 近期「已解决」问题（带回复，可修改） |
 | `scf/routes/replyQuestion.js` | `POST /api/reply-question` | 老师端回复/修改回复，飞书状态改为「已解决」并写入「老师回复」 |
-| `scf/routes/chat.js` | `POST /api/chat` | 安全代理百炼 / DashScope，前端不再暴露密钥 |
+| `scf/routes/chat.js` | `POST /api/chat` | 安全代理百炼 / DashScope，并注入飞书实时上下文；前端不暴露密钥 |
+| `scf/feishuUrl.js` | — | 拼飞书单条记录深链（活动表用 `FEISHU_TABLE_A`，问题表用 `FEISHU_TABLE_Q`） |
 | `GET /healthz` | — | 健康检查，返回 `{"ok":true,...}` |
 
 > 注意：CloudBase 云托管通过 **`process.env`** 注入环境变量（与本地 Node 一致），代码里用 `process.env.变量名` 读取。服务需持续监听 `0.0.0.0:9000`（`index.js` 已去掉 `require.main` 判断，强制监听），由平台路由到容器端口。后端还开启了 `cors` 中间件（双重保险）。

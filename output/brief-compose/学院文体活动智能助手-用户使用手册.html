@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="docx-page-size" content="A4">
+<title>学院文体活动智能助手 · 用户使用手册</title>
+<style>
+  @page {
+    @bottom-center {
+      content: counter(page);
+      font-family: SimSun, serif;
+      font-size: 10pt;
+      color: #888;
+    }
+  }
+  body { font-family: SimSun, serif; }
+  h1 { font-family: SimHei, sans-serif; font-size: 20pt; color: #111; text-align: center; margin: 0 0 6pt 0; }
+  .subtitle { font-family: SimSun, serif; font-size: 10.5pt; color: #666; text-align: center; margin: 0 0 18pt 0; }
+  h2 { font-family: SimHei, sans-serif; font-size: 15pt; color: #0b7a5b; margin: 18pt 0 8pt 0; border-bottom: 1px solid #0b7a5b; padding-bottom: 3pt; }
+  h3 { font-family: SimHei, sans-serif; font-size: 12.5pt; color: #222; margin: 12pt 0 5pt 0; }
+  p { font-family: SimSun, serif; font-size: 12pt; line-height: 1.6; color: #222; margin: 4pt 0; }
+  li { font-family: SimSun, serif; font-size: 12pt; line-height: 1.6; color: #222; margin: 3pt 0; }
+  table { border-collapse: collapse; width: 100%; margin: 8pt 0; }
+  th { font-family: SimHei, sans-serif; font-size: 11pt; background: #eef7f3; color: #0b5c47; border: 1px solid #b9d9cd; padding: 6pt; text-align: left; }
+  td { font-family: SimSun, serif; font-size: 11pt; border: 1px solid #c9d6d1; padding: 6pt; vertical-align: top; }
+  .note { font-family: SimSun, serif; font-size: 10.5pt; color: #666; }
+  .tip { font-family: SimSun, serif; font-size: 11pt; color: #0b5c47; }
+</style>
+</head>
+<body>
+
+<h1>学院文体活动智能助手</h1>
+<p class="subtitle">用户使用手册（试用版）　·　适用对象：学院老师与学生</p>
+
+<h2>一、系统简介</h2>
+<p>本系统是一个用于学院文体活动管理与智能问答的网页应用，主要解决三个问题：活动通知分散、学生难以快速找到感兴趣的活动、活动相关问题被反复询问。系统把活动信息和问答沉淀在飞书多维表格中，并内置 AI 助手基于最新数据作答，学生提问后若 AI 答不上来，会自动转交老师在后台统一回复。</p>
+<p>打开网页后，顶部有三个标签页（智能问答、活动时间表、往期回顾），点击即可切换，切换不会清空聊天记录。老师另有一个独立的后台入口。</p>
+
+<h2>二、学生端使用说明</h2>
+
+<h3>1. 智能问答（默认页）</h3>
+<p>这是与 AI 助手对话的地方，可以问活动相关的问题。</p>
+<ul>
+  <li>填写推荐条件：在页面上方选择<strong>空闲时间</strong>（可多选）和<strong>兴趣偏好</strong>（可多选，与活动分类一致：讲座、文体、读书、志愿），点击下方按钮获取个性化推荐。</li>
+  <li>快捷提问：对话框上方有灰色胶囊按钮（如"本周有讲座吗？""有什么体育比赛？"），点击即作为一条消息直接发送。</li>
+  <li>自由提问：在底部输入框输入问题，按发送或回车即可。AI 思考时会显示动态圆点。</li>
+  <li>问题转交：如果 AI 回复中出现"已记录"，说明该问题已提交给老师；相同问题不会被重复记录，学生无需反复提交。</li>
+</ul>
+
+<h3>2. 活动时间表</h3>
+<p>展示近期活动。系统从飞书读取活动数据，自动过滤掉已结束的活动，按开始时间从早到晚排序，并按日期分组显示在时间轴上。每张卡片包含活动名称、时间、地点和分类图标（讲座🎓、文体🏀、读书📖、志愿🤝）。目前为展示卡片，报名方式请以卡片信息或飞书表格为准。</p>
+
+<h3>3. 往期回顾</h3>
+<p>以网格形式展示已经结束的活动，卡片会置灰显示，用于回顾往期开展过的活动。活动结束后由老师把状态改为"已结束"，活动会自动从"活动时间表"移入本页面。</p>
+
+<h2>三、老师端使用说明</h2>
+
+<h3>0. 如何进入老师端</h3>
+<p>在页面顶部（或指定位置）切换到老师端入口，输入访问口令即可进入。老师端有三个板块标签：录入活动、活动管理、问题回复。</p>
+
+<h3>1. 录入活动</h3>
+<p>填写活动名称、开始时间、地点、报名方式、参与须知、链接（选填），点击"提交活动"。提交后活动状态自动设为"已发布"，学生会立即在"活动时间表"中看到，AI 也能据此回答相关问题。</p>
+
+<h3>2. 活动管理</h3>
+<p>列出已录入的活动（按时间倒序）。每条活动提供【在飞书打开】按钮，点击后在新标签页打开该条记录在飞书多维表格中的页面，可直接修改内容或把状态从"已发布"改为"已结束"。常用状态维护也可直接在飞书表格中操作，改动实时生效。</p>
+
+<h3>3. 问题回复</h3>
+<p>本板块分为两栏：</p>
+<ul>
+  <li><strong>待回复问题</strong>：学生提问后 AI 无法回答的问题会出现在这里。输入回复内容后点击"提交回复"，该问题状态变为"已解决"，AI 下次遇到同类问题会直接用您的回复作答。</li>
+  <li><strong>近期已回复</strong>：展示最近已处理的问题，输入框中预填了原回复。如需修正，直接修改后点击"修改回复"即可覆盖保存。每条问题同样提供【在飞书打开】按钮。</li>
+</ul>
+<p class="tip">提示：回复质量直接决定 AI 后续的答题质量，建议用简洁、准确、可直接引用的措辞。</p>
+
+<h2>四、使用须知与常见问题</h2>
+<table>
+  <tr><th>问题</th><th>说明 / 处理</th></tr>
+  <tr><td>活动时间表或往期回顾没有内容</td><td>检查飞书活动表中活动的"状态"是否为"已发布"或"已结束"。状态文字需与系统一致，改错会导致筛选不到。</td></tr>
+  <tr><td>学生反复问同一问题</td><td>系统已做语义去重（如"强制参加"≈"必须参加"），相同含义的问题不会重复入库；若重复出现，多为去重服务临时异常，问题仍会正常提交，不影响使用。</td></tr>
+  <tr><td>AI 把老师回答过的问题又说"已记录"</td><td>请确认该问题在飞书表中状态为"已解决"，且"老师回复"列已填写。</td></tr>
+  <tr><td>网页显示"系统繁忙"或请求失败</td><td>可能是网络或后台服务临时不可用，稍后重试；持续出现请联系技术人员查看后台日志。</td></tr>
+  <tr><td>【在飞书打开】提示未配置</td><td>需由管理员在后台配置飞书表格链接（FEISHU_SHEET_URL）后 restart 服务，普通用户无需处理。</td></tr>
+</table>
+
+<p class="note">本手册为试用版说明，功能以实际网页为准。使用过程中如有问题或建议，请反馈给项目负责人。</p>
+
+</body>
+</html>
