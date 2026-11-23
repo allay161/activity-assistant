@@ -1,22 +1,36 @@
+/* 学院文体活动助手：统一配色版。
+   主色与强调色统一为 #18A38C；浅色交互背景和绿色阴影使用同色透明版本。
+   保留当前布局、字号、间距、圆角、动画、响应式规则和选择器顺序。
+   深色正文、灰色辅助文字、白色卡片及近中性背景保留，维持阅读层次。
+   active、selected、open 等状态类仍由 app.js 控制。
+*/
+
+/* 统一盒模型，清除浏览器默认内外边距。 */
 * { box-sizing: border-box; margin: 0; padding: 0; }
+/* 页面基础布局及渐变背景；背景位置由 gradientBG 动画控制。 */
 body { font-family: -apple-system, "PingFang SC", sans-serif;
-    background: linear-gradient(-45deg, #f4f7f9, #e0f2f1, #f0f4ff, #f4f7f9);
+    background: linear-gradient(-45deg, #f4f7f9, rgba(24, 163, 140, 0.10), #f0f4ff, #f4f7f9);
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
     height: 100vh;
     display: flex;
     flex-direction: column;}
+/* 渐变背景动画：背景位置往返移动，循环播放。 */
 @keyframes gradientBG {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
+/* 顶部栏：展示系统名称和角色切换按钮。 */
 header { background:#18A38C; color: #fff; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; font-size: 17px;}
+/* 角色切换按钮；active 类表示当前角色。 */
 header .tabs button { background: rgba(255,255,255,0.2); color: #fff; border: none; padding: 6px 12px; margin-left: 8px; border-radius: 6px; cursor: pointer; font-size: 14px; }
 header .tabs button.active { background: #fff; color: #18A38C;font-weight: bold; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
+/* 角色页面默认隐藏，由 active 类控制显示。 */
 .page { flex: 1; overflow-y: auto; padding: 16px; display: none; }
 .page.active { display: block; }
 
+/* 卡片基础外观：半透明背景、模糊效果和悬停反馈。 */
 .card { background: rgba(255, 255, 255, 0.65); 
     backdrop-filter: blur(12px); 
     -webkit-backdrop-filter: blur(12px);
@@ -28,12 +42,15 @@ header .tabs button.active { background: #fff; color: #18A38C;font-weight: bold;
     transition: transform 0.2s ease, box-shadow 0.2s ease; }
 .card:hover {transform: translateY(-3px); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);}
 .card h3 { font-size: 15px; margin-bottom: 10px; color: #333; }
+/* 通用表单控件：标签、输入框和多行文本框。 */
 label { display: block; font-size: 14px; margin: 10px 0 6px; color: #555; }
 select, input[type=text], input[type=datetime-local], textarea { width: 100%; padding: 9px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; }
 textarea { resize: vertical; min-height: 60px; }
-button.primary { width: 100%; margin-top: 12px; padding: 12px; background: #18A38C; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(24, 163, 140, 0.2)；transition: all 0.2s ease;font-weight: 500;}
+/* 主要操作按钮的基础外观及悬停、按压反馈。 */
+button.primary { width: 100%; margin-top: 12px; padding: 12px; background: #18A38C; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(24, 163, 140, 0.2);transition: all 0.2s ease;font-weight: 500;}
 button.primary:hover {transform: translateY(-2px); box-shadow: 0 6px 12px rgba(24, 163, 140, 0.3); filter: brightness(1.05); }
 button.primary:active { transform: translateY(1px);box-shadow: 0 2px 4px rgba(24, 163, 140, 0.2); }
+/* 多选标签组采用可换行布局。 */
 .chip-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .chip {
     padding: 6px 14px; 
@@ -43,23 +60,27 @@ button.primary:active { transform: translateY(1px);box-shadow: 0 2px 4px rgba(24
     cursor: pointer; 
     background: #f3f5f8;
     color: #555;
-    transition: all 0.2s ease;
-/* ============ 全局 ============ */
+    transition: all 0.2s ease;}
+
+/* 主题变量：统一维护颜色、圆角、阴影和顶部栏高度。
+   主色和强调色同为 #18A38C，浅色背景使用它的透明版本。 */
 :root{
-  --primary:#10b981;          /* 活力绿主色调 */
-  --primary-dark:#059669;
-  --primary-soft:#e7f8f1;
-  --bg:#f4f7f9;               /* 极浅灰蓝背景 */
+  --primary:#18A38C;          
+  --primary-dark:#18A38C;
+  --primary-soft:rgba(24, 163, 140, 0.10);
+  --bg:#f4f7f9;               
   --card:#ffffff;
   --text:#1f2937;
   --muted:#6b7280;
   --line:#e8edf1;
   --radius:16px;
-  --header-h:52px;            /* header 固定高度，供 sticky 导航精确对齐（响应式会覆盖） */
+  --header-h:52px;            
   --shadow:0 6px 20px rgba(17,24,39,.06);
-  --shadow-hover:0 12px 28px rgba(16,185,129,.16);
+  --shadow-hover:0 12px 28px rgba(24, 163, 140,.16);
 }
+/* 全局盒模型与间距重置。 */
 *{box-sizing:border-box;margin:0;padding:0;}
+/* 页面纵向布局及主题背景、字体；相同属性会参与与前文规则的层叠覆盖。 */
 body{
   font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
   background:var(--bg);
@@ -70,20 +91,22 @@ body{
   line-height:1.5;
 }
 
-/* ============ 顶部 Header ============ */
+
+/* 顶部栏样式：使用主题色并吸附在视口顶部。 */
 header{
   background:var(--primary);
   color:#fff;
-  height:var(--header-h);     /* 固定高度，与 --header-h 保持一致 */
+  height:var(--header-h);     
   padding:0 18px;
   display:flex;
   justify-content:space-between;
   align-items:center;
   font-size:17px;
   font-weight:600;
-  box-shadow:0 2px 10px rgba(16,185,129,.25);
+  box-shadow:0 2px 10px rgba(24, 163, 140,.25);
   position:sticky;top:0;z-index:20;
 }
+/* 学生端、老师端按钮；active 样式突出当前角色。 */
 header .tabs button{
   background:rgba(255,255,255,.18);color:#fff;border:none;
   padding:6px 14px;margin-left:6px;border-radius:20px;cursor:pointer;
@@ -95,7 +118,8 @@ header .tabs button.active{
   box-shadow:0 2px 6px rgba(0,0,0,.12);
 }
 
-/* ============ 主导航（三 Tab） ============ */
+
+/* 学生端主导航：三项按钮均分宽度，吸顶偏移使用 --header-h。 */
 .main-nav{
   display:flex;
   background:var(--card);
@@ -114,14 +138,17 @@ header .tabs button.active{
 }
 .main-nav button:hover{color:var(--primary-dark);}
 .main-nav button.active{color:var(--primary-dark);font-weight:700;}
+/* 伪元素绘制选中项底部指示条，并播放展开动画。 */
 .main-nav button.active::after{
   content:'';position:absolute;left:18%;right:18%;bottom:0;height:3px;
   background:var(--primary);border-radius:3px 3px 0 0;
   animation:navIn .25s ease;
 }
+/* 导航指示条从中心横向展开。 */
 @keyframes navIn{from{transform:scaleX(0);}to{transform:scaleX(1);}}
 
-/* ============ 老师端子板块导航 ============ */
+
+/* 老师端子导航：录入活动、活动管理和问题回复。 */
 .teacher-nav{
   display:flex;gap:6px;margin-bottom:16px;
   background:var(--card);border:1px solid var(--line);
@@ -132,22 +159,26 @@ header .tabs button.active{
   padding:10px 6px;font-size:13.5px;color:var(--muted);
   border-radius:8px;cursor:pointer;transition:all .25s ease;white-space:nowrap;
 }
-.teacher-nav button:hover{color:var(--primary-dark);background:rgba(16,185,129,.06);}
+.teacher-nav button:hover{color:var(--primary-dark);background:rgba(24, 163, 140,.06);}
 .teacher-nav button.active{color:#fff;background:var(--primary);font-weight:700;}
 .teacher-nav button.active:hover{background:var(--primary-dark);}
+/* 老师端子面板默认隐藏，app.js 通过切换 active 类显示目标面板。 */
 .teacher-pane{display:none;}
 .teacher-pane.active{display:block;animation:pageIn .3s ease;}
 
-/* ============ 页面容器 ============ */
+
+/* 页面共用容器：限制最大宽度、水平居中；active 类控制显示。 */
 .page,.main-page{
   flex:1;overflow-y:auto;
   padding:16px;display:none;
   max-width:760px;width:100%;margin:0 auto;
 }
 .page.active,.main-page.active{display:block;animation:pageIn .3s ease;}
+/* 页面入场效果：从下方轻移并逐渐显示。 */
 @keyframes pageIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
-/* ============ 卡片 ============ */
+
+/* 通用卡片与页面标题样式；与前文同选择器规则共同参与层叠。 */
 .card{
   background:var(--card);
   border-radius:var(--radius);
@@ -162,6 +193,7 @@ header .tabs button.active{
 .page-head h3{font-size:19px;color:var(--text);}
 .page-head p{font-size:13px;color:var(--muted);margin-top:4px;}
 
+/* 通用表单外观：标签、文本和日期输入框、多行文本框。 */
 label{display:block;font-size:13px;margin:12px 0 6px;color:var(--muted);}
 select,input[type=text],input[type=datetime-local],textarea{
   width:100%;padding:10px 12px;border:1px solid var(--line);
@@ -169,48 +201,54 @@ select,input[type=text],input[type=datetime-local],textarea{
   transition:all .25s ease;
 }
 textarea{resize:vertical;min-height:64px;}
+/* 输入控件聚焦时，使用边框和外圈阴影提示当前输入位置。 */
 input:focus,textarea:focus{
   border-color:var(--primary);background:#fff;
-  box-shadow:0 0 0 3px rgba(16,185,129,.15);
+  box-shadow:0 0 0 3px rgba(24, 163, 140,.15);
 }
-/* 定义气泡弹出的动画帧 */
+
+/* 气泡入场动画的前一处定义；文件后方还有同名定义，实际效果受后方定义影响。 */
 @keyframes bubblePop {
     0% {
-        transform: scale(0.8) translateY(15px); /* 初始状态：稍微小一点，并在下方 */
-        opacity: 0; /* 完全透明 */
+        transform: scale(0.8) translateY(15px); 
+        opacity: 0; 
     }
     100% {
-        transform: scale(1) translateY(0); /* 结束状态：恢复原大小，回到正常位置 */
-        opacity: 1; /* 完全不透明 */
+        transform: scale(1) translateY(0); 
+        opacity: 1; 
     }
 }
 
-/* 给所有的对话气泡加上这个动画 */
+
+/* 气泡使用 0.5 秒入场动画，缓动曲线提供回弹效果。 */
 .bubble {
-    /* 0.4秒弹跳动画，cubic-bezier 是让动画有“回弹感”的秘密武器 */
+    
     animation: bubblePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 
-/* ============ 按钮 ============ */
+
+/* 主要按钮：主题色背景、阴影及交互反馈。 */
 button.primary{
   position:relative;overflow:hidden;
   width:100%;margin-top:14px;padding:12px;
   background:var(--primary);color:#fff;border:none;border-radius:10px;
   font-size:15px;cursor:pointer;font-weight:600;
-  box-shadow:0 4px 12px rgba(16,185,129,.28);
+  box-shadow:0 4px 12px rgba(24, 163, 140,.28);
   transition:all .2s ease;
 }
+/* 扫光伪元素：悬停时从左向右移动，按钮隐藏超出边界的部分。 */
 button.primary::after{
   content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
   background:linear-gradient(90deg,transparent,rgba(255,255,255,.4),transparent);
   transition:left .6s ease;
 }
 button.primary:hover::after{left:100%;}
-button.primary:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(16,185,129,.35);filter:brightness(1.04);}
-button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185,129,.3);}
+button.primary:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(24, 163, 140,.35);filter:brightness(1.04);}
+button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(24, 163, 140,.3);}
 
-/* ============ Chips 多选标签 ============ */
+
+/* 时间和兴趣多选标签：支持自动换行。 */
 .chip-group{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
 .chip{
   padding:7px 15px;border:1px solid var(--line);border-radius:20px;
@@ -218,23 +256,29 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   transition:all .2s ease;user-select:none;
 }
 .chip:hover{border-color:var(--primary);color:var(--primary-dark);transform:translateY(-1px);}
+/* toggleChip() 切换 selected 类，标记已选中的时间或兴趣。 */
 .chip.selected{
   background:var(--primary);color:#fff;border-color:var(--primary);
-  font-weight:600;box-shadow:0 3px 8px rgba(16,185,129,.25);
+  font-weight:600;box-shadow:0 3px 8px rgba(24, 163, 140,.25);
 }
 
-/* ============ 聊天区 ============ */
+
+/* 聊天卡片纵向排列消息区、快捷问题与输入区。 */
 .chat-card{display:flex;flex-direction:column;}
+/* 消息区限制高度；内容超出时在区域内部纵向滚动。 */
 #chat{height:340px;overflow-y:auto;padding:8px 4px;}
+/* 消息行：用户消息右对齐，AI 与用户使用不同颜色和气泡圆角。 */
 .msg{margin-bottom:12px;display:flex;animation:bubblePop .4s ease;}
 .msg.user{justify-content:flex-end;}
-.msg.user .bubble{background:var(--primary);color:#fff;border-bottom-right-radius:4px;}
+.msg.user /* 气泡限制最大宽度；pre-wrap 保留消息换行和空格，并允许自动换行。 */
+.bubble{background:var(--primary);color:#fff;border-bottom-right-radius:4px;}
 .msg.ai .bubble{background:#f1f5f9;color:var(--text);border-bottom-left-radius:4px;}
 .bubble{
   max-width:82%;padding:10px 14px;border-radius:14px;
   font-size:14px;line-height:1.6;white-space:pre-wrap;
 }
-/* 快捷问题胶囊 */
+
+/* 快捷问题按钮组：自动换行，点击行为由 HTML 和 app.js 绑定。 */
 .quick-asks{display:flex;flex-wrap:wrap;gap:8px;padding:10px 2px 2px;}
 .quick-chip{
   padding:6px 13px;border:1px solid var(--line);border-radius:18px;
@@ -244,25 +288,28 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
 .quick-chip:hover{background:var(--primary-soft);color:var(--primary-dark);border-color:var(--primary);transform:translateY(-1px);}
 .quick-chip:active{transform:translateY(1px);}
 
+/* 聊天输入栏：输入框占据剩余宽度，发送按钮位于右侧。 */
 #inputBar{display:flex;padding-top:12px;border-top:1px solid var(--line);}
 #inputBar input{
   flex:1;padding:11px 14px;border:1px solid var(--line);
   border-radius:22px;font-size:14px;outline:none;background:#fbfcfd;
 }
-#inputBar input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(16,185,129,.12);}
+#inputBar input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(24, 163, 140,.12);}
 #inputBar button{
   margin-left:8px;padding:10px 22px;background:var(--primary);color:#fff;
   border:none;border-radius:22px;font-size:14px;cursor:pointer;font-weight:600;
-  box-shadow:0 4px 10px rgba(16,185,129,.25);transition:all .2s ease;
+  box-shadow:0 4px 10px rgba(24, 163, 140,.25);transition:all .2s ease;
 }
-#inputBar button:hover{transform:translateY(-2px);box-shadow:0 7px 16px rgba(16,185,129,.35);filter:brightness(1.04);}
+#inputBar button:hover{transform:translateY(-2px);box-shadow:0 7px 16px rgba(24, 163, 140,.35);filter:brightness(1.04);}
 #inputBar button:active{transform:translateY(1px);}
+/* 气泡入场动画的后一处定义：与前方同名，维护时需统一确认两处定义。 */
 @keyframes bubblePop{
   from{opacity:0;transform:scale(.85) translateY(12px);}
   to{opacity:1;transform:none;}
 }
 
-/* "思考中"三个跳动圆点 */
+
+/* 等待回复时的三个跳动圆点；为气泡保留最小宽度。 */
 .bubble.thinking{min-width:52px;}
 .think-dots{display:inline-flex;align-items:center;gap:5px;height:18px;}
 .think-dots i{
@@ -270,23 +317,29 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   background:var(--primary);display:inline-block;
   animation:thinkBounce 1.2s ease-in-out infinite;
 }
+/* 依次延迟第二、第三个圆点的动画，形成交错跳动效果。 */
 .think-dots i:nth-child(2){animation-delay:.15s;}
 .think-dots i:nth-child(3){animation-delay:.3s;}
+/* 圆点周期性上移并改变不透明度。 */
 @keyframes thinkBounce{
   0%,60%,100%{transform:translateY(0);opacity:.35;}
   30%{transform:translateY(-5px);opacity:1;}
 }
 
-/* ============ 活动时间表（时间轴） ============ */
+
+/* 活动时间轴：日期分组、连接线、节点和活动卡片。 */
 .timeline-list{position:relative;padding-left:6px;}
 .timeline-group{position:relative;padding-left:34px;padding-bottom:22px;}
-/* 垂直线 */
+
+/* 使用伪元素绘制每个日期组向下延伸的连接线。 */
 .timeline-group::before{
   content:'';position:absolute;left:9px;top:26px;bottom:-4px;
   width:2px;background:linear-gradient(var(--primary),var(--line));
 }
+/* 最后一个日期组不再绘制向下延伸的连接线。 */
 .timeline-group:last-child::before{display:none;}
-/* 圆点节点 */
+
+/* 日期标题；其 ::before 伪元素绘制时间轴圆点。 */
 .timeline-date{
   position:relative;font-size:14px;font-weight:700;color:var(--primary-dark);
   padding:4px 0 12px;
@@ -299,7 +352,8 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
 }
 .timeline-cards{display:flex;flex-direction:column;gap:12px;}
 
-/* 活动卡片（时间轴 & 往期共用） */
+
+/* 时间轴活动卡片；图标等部分子元素样式也用于往期回顾。 */
 .activity-card{
   background:var(--card);border-radius:14px;box-shadow:var(--shadow);
   padding:14px 16px;cursor:pointer;
@@ -318,6 +372,7 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
 .ac-title .ac-cat{font-size:12px;color:var(--primary-dark);margin-top:2px;}
 .ac-meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:13px;color:var(--muted);}
 .ac-meta span{display:inline-flex;align-items:center;gap:4px;}
+/* 活动详情默认折叠，由 app.js 切换卡片的 open 类展开。 */
 .ac-detail{
   display:none;margin-top:12px;padding-top:12px;
   border-top:1px dashed var(--line);font-size:13px;color:var(--muted);
@@ -325,17 +380,20 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
 .activity-card.open .ac-detail{display:block;}
 .ac-detail a{color:var(--primary-dark);text-decoration:none;}
 
-/* ============ 往期回顾（网格） ============ */
+
+/* 往期回顾默认双列；手机改为单列，宽屏桌面改为三列。 */
 .review-grid{
   display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
 }
+/* 往期活动卡片降低饱和度和不透明度，弱化已结束活动的视觉权重。 */
 .review-card{
   background:var(--card);border-radius:14px;box-shadow:var(--shadow);
   padding:16px;position:relative;overflow:hidden;
-  filter:saturate(.55);opacity:.88;             /* 置灰降饱和，突出"已结束" */
+  filter:saturate(.55);opacity:.88;             
   transition:all .25s ease;
 }
 .review-card:hover{filter:saturate(.8);opacity:1;transform:translateY(-3px);box-shadow:var(--shadow-hover);}
+/* 往期活动状态标记，定位于卡片右上角。 */
 .review-badge{
   position:absolute;top:10px;right:10px;
   background:#eef1f4;color:#94a3b8;
@@ -345,15 +403,17 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
 .review-card .ac-name{font-size:15px;font-weight:700;color:#4b5563;margin:12px 0 8px;padding-right:52px;}
 .review-card .ac-line{font-size:12px;color:#9ca3af;margin-top:4px;}
 
-/* ============ 加载 / 空状态 ============ */
+
+/* 加载提示和空数据状态：统一使用居中布局。 */
 .loading-state{text-align:center;color:var(--muted);font-size:14px;padding:48px 0;}
+/* 空状态横跨网格所有列；纵向排列图标、标题和说明并居中。 */
 .empty-state{
-  grid-column:1 / -1;        /* 横跨网格所有列，避免只占第一列导致偏左 */
+  grid-column:1 / -1;        
   width:100%;
   text-align:center;
   display:flex;
   flex-direction:column;
-  align-items:center;        /* 内容水平居中 */
+  align-items:center;        
   justify-content:center;
   padding:56px 20px;color:var(--muted);
 }
@@ -361,29 +421,34 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
 .empty-state .empty-title{font-size:15px;font-weight:600;color:#9ca3af;}
 .empty-state .empty-desc{font-size:13px;margin-top:6px;color:#b0b7c0;}
 
-/* ============ 老师端·活动管理 ============ */
+
+/* 老师端活动管理列表：活动信息与飞书入口横向排列。 */
 .act-item{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   border-bottom:1px solid var(--line);padding:11px 0;
 }
 .act-item:last-child{border-bottom:none;}
 .act-info{min-width:0;flex:1;}
+/* 活动名称保持单行，超出宽度时以省略号显示。 */
 .act-name{font-size:14px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .act-meta{font-size:12px;color:var(--muted);margin-top:4px;}
+/* 活动管理中的“在飞书打开”按钮外观及交互反馈。 */
 .act-open-btn{
   flex:none;padding:8px 13px;background:var(--primary);color:#fff;
   border:none;border-radius:8px;font-size:12px;cursor:pointer;
   transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;
 }
-.act-open-btn:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(16,185,129,.3);filter:brightness(1.04);}
-.act-open-btn:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185,129,.3);}
+.act-open-btn:hover{transform:translateY(-2px);box-shadow:0 6px 14px rgba(24, 163, 140,.3);filter:brightness(1.04);}
+.act-open-btn:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(24, 163, 140,.3);}
 
-/* ============ 未解答问题 & Toast ============ */
+
+/* 老师端问题列表；q-resolved 为近期已回复问题提供不同背景。 */
 .q-item{border-bottom:1px solid var(--line);padding:12px 0;}
 .q-resolved{background:rgba(148,163,184,.07);border-radius:10px;padding:12px;border-bottom:none;margin-bottom:8px;}
 .q-resolved .q-text{color:var(--muted);}
 .q-item .q-text{font-size:14px;color:var(--text);margin-bottom:6px;}
 .q-item .q-meta{font-size:12px;color:var(--muted);margin-bottom:8px;}
+/* 问题回复区：横向排列输入框、回复按钮和飞书入口。 */
 .q-item .q-reply{display:flex;gap:8px;}
 .q-item .q-reply input{flex:1;}
 .q-item .q-reply button{
@@ -391,12 +456,14 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   border:none;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s ease;
 }
 .q-item .q-reply button:hover{filter:brightness(1.08);transform:translateY(-1px);}
-/* 次级操作：在飞书打开（描边样式，区别于实心主按钮） */
+
+/* 飞书入口使用描边样式，与提交回复的主操作按钮区分。 */
 .q-item .q-reply .q-open-btn{
   flex:none;background:#fff;color:var(--primary);
   border:1px solid var(--primary);font-size:12px;padding:8px 12px;
 }
 .q-item .q-reply .q-open-btn:hover{background:var(--primary);color:#fff;filter:none;}
+/* 全局轻提示：默认隐藏，固定在视口顶部中央；文本和显示时机由 app.js 控制。 */
 .toast{
   position:fixed;top:24px;left:50%;transform:translateX(-50%);
   background:rgba(31,41,55,.94);color:#fff;padding:11px 22px;
@@ -405,19 +472,20 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   max-width:calc(100vw - 32px);text-align:center;
 }
 
-/* ============================================================
-   ============ 响应式适配：手机 / 平板 / 桌面 ============
-   ============================================================ */
 
-/* ---- 平板（≤820px）：导航字号与页面内边距微调 ---- */
+
+
+/* 宽度 ≤820px：缩小页面边距和导航字号；手机也会匹配此规则。 */
 @media(max-width:820px){
   .page,.main-page{padding:14px 12px;}
   .main-nav button{font-size:13.5px;padding:13px 4px;}
 }
 
-/* ---- 手机（≤600px）：核心适配 ---- */
+
+/* 宽度 ≤600px：调整顶部栏、卡片、标签、聊天区和活动布局。
+   将顶部栏高度变量改为 48px，主导航吸顶位置随之调整。 */
 @media(max-width:600px){
-  :root{--header-h:48px;}                 /* 手机 header 更矮，nav 自动跟随 */
+  :root{--header-h:48px;}                 
 
   header{padding:0 12px;font-size:15px;}
   header .tabs button{padding:5px 11px;font-size:12px;margin-left:4px;}
@@ -431,19 +499,23 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   .page-head{padding:4px 2px 12px;}
   .page-head h3{font-size:17px;}
 
-  /* Chips 更紧凑，8 个时间选项在窄屏也能整齐换行 */
+  
+/* 缩小标签间距和内边距，让时间与兴趣选项在窄屏下紧凑换行。 */
   .chip-group{gap:6px;}
   .chip{padding:6px 12px;font-size:12.5px;}
 
-  /* 聊天区高度改为视口比例，避免小屏被输入栏挤出屏幕 */
+  
+/* 聊天区高度取视口高度的 46% 与 360px 中较小值。 */
   #chat{height:min(46vh,360px);}
   .quick-asks{gap:6px;padding:8px 0 0;}
   .quick-chip{padding:5px 11px;font-size:12px;}
   .bubble{font-size:13.5px;max-width:88%;}
-  #inputBar input{font-size:16px;}         /* 16px 防止 iOS Safari 聚焦时自动放大页面 */
+/* 输入字号设为 16px，以减少 iOS Safari 聚焦输入框时自动放大的情况。 */
+  #inputBar input{font-size:16px;}         
   #inputBar button{padding:10px 16px;font-size:14px;}
 
-  /* 时间轴：缩进收窄，给卡片留更多横向空间 */
+  
+/* 收窄时间轴缩进，为小屏幕的活动卡片保留更多横向空间。 */
   .timeline-group{padding-left:28px;}
   .timeline-group::before{left:7px;}
   .timeline-date::before{left:-26px;width:12px;height:12px;}
@@ -451,13 +523,15 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   .ac-meta{gap:8px;font-size:12px;}
   .activity-card{padding:12px 13px;}
 
-  /* 往期回顾：手机单列，卡片更舒展 */
+  
+/* 手机端往期回顾改为单列。 */
   .review-grid{grid-template-columns:1fr;gap:12px;}
 
   .toast{top:14px;font-size:13px;}
 }
 
-/* ---- 小屏手机（≤360px）：进一步压缩导航 ---- */
+
+/* 宽度 ≤360px：进一步缩小标题、角色按钮、导航和标签尺寸。 */
 @media(max-width:360px){
   header{font-size:14px;}
   header .tabs button{padding:4px 8px;font-size:11px;}
@@ -465,7 +539,434 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(16,185
   .chip{padding:5px 10px;font-size:12px;}
 }
 
-/* ---- 宽屏桌面（≥1100px）：往期回顾三列 ---- */
+
+/* 宽度 ≥1100px：往期回顾使用三列网格。 */
 @media(min-width:1100px){
   .review-grid{grid-template-columns:repeat(3,1fr);}
 }
+
+/* ==================================================
+   学生端视觉优化
+   放在文件末尾，覆盖前面的同名样式
+   ================================================== */
+
+/* 页面背景保持清爽，关闭原来的背景动画 */
+body {
+  height: auto;
+  min-height: 100vh;
+  background: #f3f7f6;
+  animation: none;
+}
+
+/* 统一顶部栏与导航主题色；沿用当前顶部栏高度 */
+:root {
+  --primary: #18A38C;
+  --primary-dark: #18A38C;
+  --primary-soft: rgba(24, 163, 140, 0.10);
+  --header-h: 64px;
+}
+
+/* 公共顶部栏 */
+header {
+  height: var(--header-h);
+  padding: 0 5%;
+  background: #ffffff;
+  color: #173f36;
+  border-bottom: 1px solid #e2ebe6;
+  box-shadow: none;
+}
+
+header .tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(24, 163, 140, 0.06);
+  border-radius: 12px;
+}
+
+header .tabs button {
+  margin: 0;
+  padding: 8px 16px;
+  border-radius: 9px;
+  background: transparent;
+  color: #64766e;
+}
+
+header .tabs button:hover {
+  background: rgba(24, 163, 140, 0.12);
+}
+
+header .tabs button.active {
+  background: #ffffff;
+  color: var(--primary-dark);
+  box-shadow: 0 2px 6px rgba(24, 163, 140, 0.08);
+}
+
+/* 学生端主导航 */
+.main-nav {
+  justify-content: center;
+  gap: 12px;
+  padding: 0 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2ebe6;
+}
+
+.main-nav button {
+  flex: 0 1 180px;
+  padding: 18px 12px;
+  font-size: 14px;
+}
+
+.main-nav button.active::after {
+  left: 22%;
+  right: 22%;
+  height: 3px;
+}
+
+/* 学生端内容容器 */
+.main-page {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 30px 24px;
+}
+
+/* 智能问答：桌面端左右布局 */
+#page-chat.active {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* 学生端卡片 */
+.main-page .card {
+  min-width: 0;
+  margin-bottom: 0;
+  padding: 26px;
+  border: 1px solid #e1ebe4;
+  border-radius: 20px;
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 8px 28px rgba(24, 163, 140, 0.04);
+}
+
+.main-page .card:hover {
+  transform: none;
+  box-shadow: 0 8px 28px rgba(24, 163, 140, 0.04);
+}
+
+.main-page .card h3 {
+  margin-bottom: 22px;
+  color: #203e32;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* 时间和兴趣筛选 */
+#page-chat label {
+  margin: 22px 0 10px;
+  color: #66796d;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#page-chat .chip-group {
+  gap: 9px;
+}
+
+#page-chat .chip {
+  padding: 9px 13px;
+  border: 1px solid #e2ebe4;
+  border-radius: 10px;
+  background: #f7faf7;
+  color: #526859;
+  font-size: 13px;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+#page-chat .chip:hover {
+  transform: none;
+  border-color: rgba(24, 163, 140, 0.35);
+  background: rgba(24, 163, 140, 0.07);
+  color: var(--primary-dark);
+}
+
+#page-chat .chip.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  box-shadow: none;
+  font-weight: 600;
+}
+
+/* 获取推荐按钮 */
+#page-chat button.primary {
+  margin-top: 28px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: var(--primary);
+  font-size: 14px;
+  box-shadow: 0 4px 12px rgba(24, 163, 140, 0.14);
+}
+
+#page-chat button.primary:hover {
+  transform: translateY(-1px);
+  background: var(--primary-dark);
+  filter: none;
+}
+
+/* 聊天卡片 */
+#page-chat .chat-card {
+  overflow: hidden;
+}
+
+#page-chat .chat-card h3 {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #edf1ed;
+}
+
+/* 消息区 */
+#chat {
+  height: 360px;
+  padding: 10px 2px 18px;
+}
+
+#chat .msg {
+  margin-bottom: 16px;
+}
+
+#chat .bubble {
+  max-width: 88%;
+  padding: 13px 16px;
+  border-radius: 15px;
+  font-size: 14px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+#chat .msg.ai .bubble {
+  border: 1px solid #e5ede6;
+  border-bottom-left-radius: 5px;
+  background: #f3f7f3;
+  color: #344e3e;
+}
+
+#chat .msg.user .bubble {
+  border-bottom-right-radius: 5px;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+/* 快捷问题 */
+#quickAsks {
+  gap: 8px;
+  padding: 14px 0;
+}
+
+#quickAsks .quick-chip {
+  padding: 7px 11px;
+  border: 1px solid #e3ebe4;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #6a7c6e;
+  font-size: 12px;
+}
+
+#quickAsks .quick-chip:hover {
+  transform: none;
+  border-color: rgba(24, 163, 140, 0.35);
+  background: rgba(24, 163, 140, 0.07);
+  color: var(--primary-dark);
+}
+
+/* 聊天输入栏 */
+#inputBar {
+  display: flex;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid #edf1ed;
+}
+
+#inputBar input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 15px;
+  border: 1px solid #dfe9e1;
+  border-radius: 12px;
+  background: #f8faf8;
+}
+
+#inputBar input:focus {
+  border-color: var(--primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(24, 163, 140, 0.09);
+}
+
+#inputBar button {
+  flex-shrink: 0;
+  margin-left: 0;
+  padding: 11px 20px;
+  border-radius: 12px;
+  background: var(--primary);
+  box-shadow: none;
+}
+
+#inputBar button:hover {
+  transform: none;
+  background: var(--primary-dark);
+  box-shadow: none;
+  filter: none;
+}
+
+/* 活动页面标题与卡片 */
+.main-page .page-head {
+  padding: 0 0 24px;
+}
+
+.main-page .page-head h3 {
+  color: #203e32;
+  font-size: 22px;
+}
+
+.main-page .activity-card,
+.main-page .review-card {
+  border: 1px solid #e1ebe4;
+  border-radius: 16px;
+  box-shadow: 0 5px 18px rgba(24, 163, 140, 0.04);
+}
+
+.main-page .activity-card {
+  border-left: 4px solid var(--primary);
+}
+
+.main-page .empty-state {
+  min-height: 240px;
+  padding: 48px 24px;
+  border: 1px dashed #d5e3d8;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+/* 平板和手机：智能问答改为上下布局 */
+@media (max-width: 820px) {
+  #page-chat.active {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .main-page {
+    padding: 22px 18px;
+  }
+
+  #chat {
+    height: 320px;
+  }
+}
+
+/* 手机：收紧间距，保留舒适的输入与点击空间 */
+@media (max-width: 600px) {
+  :root {
+    --header-h: 58px;
+  }
+
+  header {
+    padding: 0 14px;
+    font-size: 15px;
+  }
+
+  header .tabs button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .main-nav {
+    gap: 0;
+    padding: 0 8px;
+  }
+
+  .main-nav button {
+    padding: 15px 4px;
+    font-size: 13px;
+  }
+
+  .main-page {
+    padding: 18px 12px;
+  }
+
+  .main-page .card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .main-page .card h3 {
+    font-size: 17px;
+  }
+
+  #chat {
+    height: 300px;
+  }
+
+  #chat .bubble {
+    max-width: 92%;
+  }
+
+  #inputBar input {
+    font-size: 16px;
+  }
+
+  #inputBar button {
+    padding: 10px 15px;
+  }
+}
+header {
+  background: #18A38C;
+  color: #ffffff;
+  border-bottom: none;
+  box-shadow: 0 2px 10px rgba(24, 163, 140, 0.15);
+}
+
+header .tabs button.active,
+header .tabs button.active:hover {
+  background: #ffffff;
+  color: #18A38C;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 顶部角色切换：提高未选中按钮的文字对比度 */
+header .tabs {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+header .tabs button {
+  background: transparent;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 鼠标悬停：浅白色背景提示 */
+header .tabs button:hover {
+  background: rgba(255, 255, 255, 0.20);
+  color: #ffffff;
+}
+
+/* 当前角色：白底绿字 */
+header .tabs button.active,
+header .tabs button.active:hover {
+  background: #ffffff;
+  color: #18A38C;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 键盘操作时显示焦点边框 */
+header .tabs button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
