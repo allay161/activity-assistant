@@ -23,7 +23,8 @@
 | 文件 | 路由 | 说明 |
 | --- | --- | --- |
 | `scf/index.js` | （入口） | Express 应用，挂载下面所有路由，`listen(9000, '0.0.0.0')` 常驻；并用 `express.static` 托管根目录前端文件，访问 `/` 返回 `index.html` |
-| `Dockerfile` | — | 基于 `node:18-alpine`，安装生产依赖、暴露 9000 端口、`CMD node scf/index.js` |
+| `Dockerfile` | — | 基于 `node:22-alpine`，配置东八区时区 + 腾讯云 npm 源，安装生产依赖、暴露 9000 端口、`CMD node scf/index.js` |
+| `.dockerignore` | — | 构建时排除 `.git/`、`.workbuddy/`、`node_modules/`、`output/` 等非运行文件 |
 | `scf/feishu.js` | — | 获取飞书 `tenant_access_token` |
 | `scf/routes/addActivity.js` | `POST /api/add-activity` | 老师端录入活动，写入飞书「活动表」（状态=已发布） |
 | `scf/routes/getActivities.js` | `GET /api/get-activities` | 拉取全部活动，供学生端时间轴/往期回顾渲染 |
