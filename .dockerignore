@@ -1,0 +1,11 @@
+.git
+.gitignore
+.workbuddy
+node_modules
+scf/node_modules
+npm-debug.log
+output
+README.md
+项目交付手册.md
+Dockerfile
+.dockerignore
