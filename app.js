@@ -1,12 +1,16 @@
+/* 学院文体活动助手前端逻辑：注释整理版。
+ * 配合 index.html 的元素 ID、事件入口及 style.css 状态类使用。
+ * 保留原有可执行代码、配置值、接口地址和执行顺序。
+ */
 // ================== 配置区（注意：不要在这里写真实Key） ==================
-// 后端接口基础地址：吕晨萱的后端已部署（腾讯云 CloudBase 云托管），
-// 2026-11-09 孙赟联调实测通过（get-questions / reply-question / chat 正常）。
+// 后端接口基础地址；空值表示请求当前站点的 /api/... 相对路径。
+// 完整功能需配套后端服务，本地双击 HTML 不会提供这些接口。
 const BASE_URL = '';
 
 // 学生端对话走哪条链路（迁移只需改这一个开关，callAgent 内部已两条分支写好）：
 //   false = 直连阿里云百炼（需填下面的 API_KEY / APP_ID，Key 会暴露在前端）
 //   true  = 走后端代理 {BASE_URL}/api/chat（Key 只放在服务端环境变量里）
-// 2026-11-09 实测 /api/chat 已就绪，开关已置 true。
+// 当前选择后端代理分支，接口可用性以实际部署为准。
 const USE_PROXY_CHAT = true;
 
 const API_KEY = 'xxx';
@@ -23,6 +27,9 @@ const TEACHER_PASSCODE = 'whu2026';
 const ENABLE_FRONTEND_UNANSWERED_RECORD = true;
 
 // ---------- 通用 ----------
+/**
+ * 显示 #toast 轻提示，2 秒后隐藏。
+ */
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.style.display = 'block';
@@ -31,14 +38,17 @@ function toast(msg) {
 
 // ========== 导航：角色切换（学生端 / 老师端） ==========
 // 学生端展示三 Tab 主导航；老师端展示后台页面。
+/**
+ * 切换角色和导航显示；老师端先检查会话验证标记，每次进入时加载问题与活动。
+ */
 function switchRole(name) {
   const nav = document.getElementById('mainNav');
   const mainPages = document.querySelectorAll('.main-page');
   const teacherPage = document.getElementById('page-teacher');
 
   // 老师端口令验证（sessionStorage 会话级记忆，验证通过后本次会话不再重复询问）
-  // 注意：不用 prompt()，QQ/微信内置浏览器会拦截原生弹窗导致点"老师端"没反应，
-  // 改为弹出 index.html 里的自定义 Modal（纯 DOM 元素，不会被拦截）。
+  // 采用自定义弹窗，以减少部分内置浏览器对原生 prompt() 的兼容问题。
+  // 使用 index.html 的自定义 DOM 弹窗，减少对原生弹窗行为的依赖。
   if (name === 'teacher' && !sessionStorage.getItem('teacherVerified')) {
     openPasscodeModal();
     return; // 验证成功后由 confirmPasscode() 重新调用 switchRole('teacher') 进入
@@ -62,6 +72,9 @@ function switchRole(name) {
 }
 
 // ---------- 教师验证弹窗（自定义 Modal，替代 prompt） ----------
+/**
+ * 清空输入并显示验证弹窗，延迟聚焦输入框。
+ */
 function openPasscodeModal() {
   const mask = document.getElementById('passcode-mask');
   const inp = document.getElementById('passcode-input');
@@ -70,9 +83,15 @@ function openPasscodeModal() {
   // 延迟聚焦，部分安卓 WebView 需要等弹层完成渲染后 focus 才生效
   setTimeout(() => inp.focus(), 100);
 }
+/**
+ * 隐藏验证弹窗，不改变当前角色。
+ */
 function closePasscodeModal() {
   document.getElementById('passcode-mask').style.display = 'none';
 }
+/**
+ * 校验口令，通过后记录会话标记并重新调用老师端入口。
+ */
 function confirmPasscode() {
   const pwd = document.getElementById('passcode-input').value;
   if (pwd === TEACHER_PASSCODE) {
@@ -92,6 +111,9 @@ document.getElementById('passcode-mask').addEventListener('click', function (e) 
 // ========== 导航：主 Tab 切换（智能问答 / 活动时间表 / 往期回顾） ==========
 let currentMainTab = 'chat';
 
+/**
+ * 切换 chat、timeline 或 review 页面；refetch=false 时只切换界面，不重新请求活动。
+ */
 function switchMainTab(name, refetch = true) {
   currentMainTab = name;
   document.querySelectorAll('.main-page').forEach(p => p.classList.remove('active'));
@@ -111,12 +133,18 @@ function switchMainTab(name, refetch = true) {
 }
 
 // 兼容旧调用（若别处仍调用 switchTab）
+/**
+ * 兼容旧入口：将 student 映射到 chat，teacher 转交角色切换函数。
+ */
 function switchTab(name) {
   if (name === 'teacher') switchRole('teacher');
   else switchMainTab(name === 'student' ? 'chat' : name);
 }
 
 // ========== 老师端子板块切换（录入活动 / 活动管理 / 问题回复） ==========
+/**
+ * 切换老师端子面板；进入活动管理或问题回复时刷新相应数据。
+ */
 function switchTeacherTab(name) {
   document.querySelectorAll('.teacher-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.teacher-nav button').forEach(b => b.classList.remove('active'));
@@ -129,7 +157,13 @@ function switchTeacherTab(name) {
   if (name === 'question') loadQuestions();
 }
 
+/**
+ * 切换标签的 selected 类，与 CSS 配合呈现选中状态。
+ */
 function toggleChip(el) { el.classList.toggle('selected'); }
+/**
+ * 返回指定标签组中所有已选标签的文本数组。
+ */
 function getSelected(containerId) {
   return Array.from(document.querySelectorAll('#' + containerId + ' .chip.selected')).map(c => c.textContent);
 }
@@ -138,6 +172,9 @@ function getSelected(containerId) {
 const chat = document.getElementById('chat');
 const input = document.getElementById('input');
 
+/**
+ * 追加消息并滚动到底部；正文通过 textContent 写入，避免将消息解析为 HTML。
+ */
 function addMsg(text, role) {
   const div = document.createElement('div');
   div.className = 'msg ' + role;
@@ -148,6 +185,9 @@ function addMsg(text, role) {
 }
 
 // "思考中"气泡：三个跳动的圆点（动效由 CSS 完成），返回气泡元素供回复时替换文本
+/**
+ * 创建等待回复的气泡并返回其正文元素，供异步请求完成后替换内容。
+ */
 function addThinkingMsg() {
   const div = document.createElement('div');
   div.className = 'msg ai';
@@ -159,6 +199,9 @@ function addThinkingMsg() {
 
 // 老师端写接口统一带上当前会话口令，供后端做最基本的校验。
 // 注意：这只是提高门槛，不是安全机制——真正的权限边界在后端。
+/**
+ * 构建老师端写接口请求头；前端口令可被查看，实际权限控制必须由后端承担。
+ */
 function teacherHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -166,6 +209,9 @@ function teacherHeaders() {
   };
 }
 
+/**
+ * 按配置选择后端代理或百炼直连并返回回复文本；错误交给调用方处理。
+ */
 async function callAgent(prompt) {
   // 分支一：走后端代理（USE_PROXY_CHAT = true），Key 只存在服务端
   if (USE_PROXY_CHAT) {
@@ -207,6 +253,10 @@ async function callAgent(prompt) {
 // 后端会做语义去重：若判定为重复，给出友好提示而不是重复提交。
 // 注：改造后 AI 识别到重复时会用"已有同学提问"话术，不含这两个词，通常不会走到这里；
 //    这里的 duplicate 提示是兜底（AI 漏判时由后端语义去重拦截）。
+/**
+ * 满足开关和回复关键词条件时请求后端记录问题。
+ * 会话中保留最近三个问题以减少重复请求；存储和跨用户去重依赖后端。
+ */
 async function maybeRecordUnanswered(question, reply) {
   if (!ENABLE_FRONTEND_UNANSWERED_RECORD) return;
   if (!reply || (!reply.includes('已记录') && !reply.includes('稍后回复'))) return;
@@ -234,6 +284,9 @@ async function maybeRecordUnanswered(question, reply) {
 }
 
 // 真正的发送逻辑。传入 text 则直接发送（快捷胶囊用）；不传则从输入框取。
+/**
+ * 统一处理输入框和快捷问题：显示用户消息、请求回复、更新等待气泡和触发问题记录。
+ */
 async function sendMessage(text) {
   if (typeof text !== 'string') text = input.value.trim();
   text = String(text).trim();
@@ -252,11 +305,20 @@ async function sendMessage(text) {
 }
 
 // 输入框发送按钮 / 回车
+/**
+ * 输入框按钮及回车使用的发送入口。
+ */
 function send() { return sendMessage(); }
 
 // 快捷问题胶囊：点击后作为一条消息直接发出
+/**
+ * 将预设问题交给统一消息发送函数。
+ */
 function quickAsk(text) { return sendMessage(text); }
 
+/**
+ * 读取时间与兴趣生成推荐请求；两组均为空时停止，只有一组为空时使用“不限”。
+ */
 async function submitPreference() {
   const times = getSelected('timeChips');
   const interests = getSelected('interestChips');
@@ -275,6 +337,9 @@ async function submitPreference() {
 }
 
 // ---------- 老师端 ----------
+/**
+ * 读取表单并提交活动；校验名称和时间，提交时禁用按钮，成功后清空表单及缓存。
+ */
 async function submitActivity() {
   const timeRaw = document.getElementById('act-time').value; // YYYY-MM-DDTHH:mm，不含时区
   const payload = {
@@ -315,6 +380,9 @@ async function submitActivity() {
 }
 
 // 老师端：拉取活动列表，每条提供【在飞书打开】按钮直达该记录的飞书深链进行编辑
+/**
+ * 强制请求活动并生成管理列表；每条记录的飞书入口使用后端返回的 feishu_url。
+ */
 async function loadTeacherActivities() {
   const list = document.getElementById('teacherActivityList');
   if (!list) return;
@@ -324,7 +392,7 @@ async function loadTeacherActivities() {
     list.innerHTML = '<div style="color:#999;font-size:13px;">暂无活动</div>';
     return;
   }
-  // 按开始时间倒序，最近发布的排前面
+  // 按开始时间倒序，开始时间较晚的活动排在前面。
   const sorted = all.slice().sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
   list.innerHTML = '';
   sorted.forEach(a => {
@@ -363,6 +431,9 @@ async function loadTeacherActivities() {
 }
 
 // 渲染一组问题条目。resolved=true 表示是"近期已回复"，输入框预填原回复并可修改。
+/**
+ * 生成问题卡片；resolved=true 时预填原回复并提供修改入口，兼容多种数据字段。
+ */
 function renderQuestionList(container, items, { resolved = false } = {}) {
   if (!container) return;
   if (!items.length) {
@@ -411,6 +482,9 @@ function renderQuestionList(container, items, { resolved = false } = {}) {
   });
 }
 
+/**
+ * 请求问题列表，分别渲染待回复和近期已回复；失败时显示加载错误。
+ */
 async function loadQuestions() {
   const list = document.getElementById('questionList');
   if (!list) return;
@@ -435,8 +509,11 @@ async function loadQuestions() {
   renderQuestionList(document.getElementById('resolvedList'), resolved, { resolved: true });
 }
 
-// 提交/修改回复：走同一个 reply-question 接口（PUT 覆盖，状态置为已解决）。
-// 已回复的问题修改后仍为"已解决"，AI 下次会用新的老师回复作答。
+// 提交与修改回复均使用 POST 请求调用 /api/reply-question。
+// 保存成功后刷新问题列表；记录状态和 AI 使用回复的方式由后端决定。
+/**
+ * 提交非空回复；成功后刷新列表，失败时恢复按钮。
+ */
 async function submitReply(recordId, btn) {
   const inputEl = document.getElementById('reply-input-' + recordId);
   const replyText = inputEl ? inputEl.value.trim() : '';
@@ -464,6 +541,10 @@ async function submitReply(recordId, btn) {
 let activitiesCache = null; // 简易缓存，避免同一会话内重复请求
 
 // 拉取全部活动（GET /api/get-activities）
+/**
+ * 请求活动数组并更新页面内缓存；默认 force=true，总会请求。
+ * force=false 且已有缓存时复用；请求异常时返回缓存或空数组。
+ */
 async function loadActivities(force = true) {
   if (!force && activitiesCache) return activitiesCache;
   try {
@@ -479,6 +560,9 @@ async function loadActivities(force = true) {
 }
 
 // 根据活动名称推断分类图标（讲座🎓、文体🏀、读书📖、志愿🤝）
+/**
+ * 依次匹配名称关键词，采用第一个命中的分类；否则返回通用活动图标。
+ */
 function guessCategory(name) {
   const n = name || '';
   if (/讲座|论坛|学术|报告|沙龙|研讨|课/.test(n)) return { icon: '🎓', label: '讲座' };
@@ -489,6 +573,9 @@ function guessCategory(name) {
 }
 
 // 生成活动卡片 DOM（时间轴页与往期页复用）
+/**
+ * 生成并返回卡片元素；past=true 用于往期回顾，其余卡片支持展开详情。
+ */
 function buildActivityCard(a, { past = false } = {}) {
   const cat = guessCategory(a.name);
   const card = document.createElement('div');
@@ -554,6 +641,9 @@ function buildActivityCard(a, { past = false } = {}) {
 }
 
 // 空状态图（统一美观占位）
+/**
+ * 创建图标、标题和说明组成的空状态元素，供活动页面复用。
+ */
 function buildEmptyState(emoji, title, desc) {
   const box = document.createElement('div');
   box.className = 'empty-state';
@@ -565,7 +655,10 @@ function buildEmptyState(emoji, title, desc) {
 }
 
 // ---------- 时间轴渲染（核心） ----------
-// 步骤：过滤掉"已结束" → 按开始时间升序 → 按日期分组 → 渲染节点+卡片
+// 步骤：仅保留“已发布” → 按开始时间升序 → 按日期分组 → 渲染节点和卡片。
+/**
+ * 从缓存筛选已发布活动，按开始时间升序及日期分组后渲染时间轴。
+ */
 function renderTimeline() {
   const box = document.getElementById('timelineList');
   if (!box) return;
@@ -620,6 +713,9 @@ function renderTimeline() {
 }
 
 // 把 "12/03" 这类日期显示美化成 "12月03日"（若已是中文格式则原样返回）
+/**
+ * 将纯月日格式转换为中文日期；不匹配时返回原值，不进行日期有效性校验。
+ */
 function formatDateLabel(s) {
   const m = String(s).match(/^(\d{1,2})[.\/-](\d{1,2})$/);
   if (m) return `${m[1]}月${m[2]}日`;
@@ -627,6 +723,9 @@ function formatDateLabel(s) {
 }
 
 // ---------- 往期回顾渲染 ----------
+/**
+ * 从缓存筛选已结束活动，按开始时间倒序渲染往期卡片。
+ */
 function renderReview() {
   const box = document.getElementById('reviewGrid');
   if (!box) return;
@@ -651,3 +750,5 @@ loadActivities().then(() => {
   renderTimeline();
   renderReview();
 });
+
+

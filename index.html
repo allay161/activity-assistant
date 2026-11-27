@@ -1,167 +1,219 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>学院文体活动智能助手</title>
-<!-- 引入样式文件 -->
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学院文体活动智能助手</title>
+    <!-- 引入外部 CSS 样式文件 -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <span>学院文体活动助手</span>
-  <div class="tabs">
-    <button id="tab-student" class="active" onclick="switchRole('student')">学生端</button>
-    <button id="tab-teacher" onclick="switchRole('teacher')">老师端</button>
-  </div>
-</header>
+    <!-- ========================================== -->
+    <!-- 1. 顶部导航栏：包含系统名称与身份切换按钮 -->
+    <!-- ========================================== -->
+    <header>
+        <span>学院文体活动助手</span>
+        <div class="tabs">
+            <!-- 点击触发 switchRole() 切换学生端/老师端界面 -->
+            <button id="tab-student" class="active" onclick="switchRole('student')">学生端</button>
+            <button id="tab-teacher" onclick="switchRole('teacher')">老师端</button>
+        </div>
+    </header>
 
-<!-- ============ 主导航（三 Tab，仅学生端可见） ============ -->
-<nav class="main-nav" id="mainNav">
-  <button id="nav-chat" class="active" onclick="switchMainTab('chat')">智能问答</button>
-  <button id="nav-timeline" onclick="switchMainTab('timeline')">活动时间表</button>
-  <button id="nav-review" onclick="switchMainTab('review')">往期回顾</button>
-</nav>
+    <!-- ========================================== -->
+    <!-- 2. 学生端主体（包含顶部主导航与三个功能页面） -->
+    <!-- ========================================== -->
+    
+    <!-- 学生端主导航（三个 Tab 切换） -->
+    <nav class="main-nav" id="mainNav">
+        <button id="nav-chat" class="active" onclick="switchMainTab('chat')">智能问答</button>
+        <button id="nav-timeline" onclick="switchMainTab('timeline')">活动时间表</button>
+        <button id="nav-review" onclick="switchMainTab('review')">往期回顾</button>
+    </nav>
 
-<!-- ============ Tab1：智能问答（保留原聊天界面，DOM 常驻不清空） ============ -->
-<div class="main-page active" id="page-chat">
-  <div class="card">
-    <h3>告诉我你的空闲时间和兴趣</h3>
-    <label>空闲时间（可多选）</label>
-    <div class="chip-group" id="timeChips">
-      <div class="chip" onclick="toggleChip(this)">工作日晚上</div>
-      <div class="chip" onclick="toggleChip(this)">周末上午</div>
-      <div class="chip" onclick="toggleChip(this)">周末下午</div>
-      <div class="chip" onclick="toggleChip(this)">周末晚上</div>
+    <!-- Tab1：智能问答页面（默认显示） -->
+    <!-- 注意：此页面DOM常驻不清空，保留聊天记录 -->
+    <div class="main-page active" id="page-chat">
+        
+        <!-- 条件筛选卡片：用户选择空闲时间与兴趣偏好 -->
+        <div class="card">
+            <h3>告诉我你的空闲时间和兴趣</h3>
+            
+            <label>空闲时间（可多选）</label>
+            <!-- 时间标签组：点击触发 toggleChip() 切换选中状态 -->
+            <div class="chip-group" id="timeChips">
+                <div class="chip" onclick="toggleChip(this)">工作日晚上</div>
+                <div class="chip" onclick="toggleChip(this)">周末上午</div>
+                <div class="chip" onclick="toggleChip(this)">周末下午</div>
+                <div class="chip" onclick="toggleChip(this)">周末晚上</div>
+            </div>
+
+            <label>兴趣偏好（可多选）</label>
+            <!-- 兴趣标签组：点击触发 toggleChip() 切换选中状态 -->
+            <div class="chip-group" id="interestChips">
+                <div class="chip" onclick="toggleChip(this)">讲座🎓</div>
+                <div class="chip" onclick="toggleChip(this)">文体🏀</div>
+                <div class="chip" onclick="toggleChip(this)">读书📖</div>
+                <div class="chip" onclick="toggleChip(this)">志愿🤝</div>
+            </div>
+            <!-- 提交偏好按钮：收集标签数据并请求推荐 -->
+            <button class="primary" onclick="submitPreference()">获取推荐活动</button>
+        </div>
+
+        <!-- 聊天对话框卡片 -->
+        <div class="card chat-card">
+            <h3>与助手对话</h3>
+            
+            <!-- 消息展示区：AI 和用户的气泡都在这里渲染 -->
+            <div id="chat">
+                <!-- 初始欢迎语 -->
+                <div class="msg ai">
+                    <div class="bubble">你好，我是学院文体活动助手。你可以先填写上面的时间和兴趣获取推荐，也可以直接问我问题。</div>
+                </div>
+            </div>
+
+            <!-- 快捷提问区：点击快速发送预设问题，触发 quickAsk() -->
+            <div class="quick-asks" id="quickAsks">
+                <button type="button" class="quick-chip" onclick="quickAsk('本周有讲座吗？')">本周有讲座吗？</button>
+                <button type="button" class="quick-chip" onclick="quickAsk('有什么体育比赛？')">有什么体育比赛？</button>
+                <button type="button" class="quick-chip" onclick="quickAsk('近期有哪些读书会？')">近期有哪些读书会？</button>
+                <button type="button" class="quick-chip" onclick="quickAsk('有志愿活动吗？')">有志愿活动吗？</button>
+            </div>
+
+            <!-- 底部输入区：输入框支持回车发送，按钮触发 send() -->
+            <div id="inputBar" style="margin-top:10px;">
+                <input id="input" type="text" placeholder="输入你的问题…" onkeydown="if(event.key==='Enter') send()">
+                <button onclick="send()">发送</button>
+            </div>
+        </div>
     </div>
-    <label>兴趣偏好（可多选）</label>
-    <div class="chip-group" id="interestChips">
-      <div class="chip" onclick="toggleChip(this)">讲座🎓</div>
-      <div class="chip" onclick="toggleChip(this)">文体🏀</div>
-      <div class="chip" onclick="toggleChip(this)">读书📖</div>
-      <div class="chip" onclick="toggleChip(this)">志愿🤝</div>
+
+    <!-- Tab2：活动时间表页面 -->
+    <div class="main-page" id="page-timeline">
+        <div class="page-head">
+            <h3>📅 活动时间表</h3>
+        </div>
+        <!-- 时间轴列表容器（数据由 app.js 渲染） -->
+        <div id="timelineList" class="timeline-list">
+            <div class="loading-state">正在加载活动…</div>
+        </div>
     </div>
-    <button class="primary" onclick="submitPreference()">获取推荐活动</button>
-  </div>
 
-  <div class="card chat-card">
-    <h3>与助手对话</h3>
-    <div id="chat">
-      <div class="msg ai"><div class="bubble">你好，我是学院文体活动助手。你可以先填写上面的时间和兴趣获取推荐，也可以直接问我问题。</div></div>
+    <!-- Tab3：往期回顾页面 -->
+    <div class="main-page" id="page-review">
+        <div class="page-head">
+            <h3>🕰️ 往期回顾</h3>
+        </div>
+        <!-- 往期活动网格容器（数据由 app.js 渲染） -->
+        <div id="reviewGrid" class="review-grid">
+            <div class="loading-state">正在加载往期活动…</div>
+        </div>
     </div>
-    <div class="quick-asks" id="quickAsks">
-      <button type="button" class="quick-chip" onclick="quickAsk('本周有讲座吗？')">本周有讲座吗？</button>
-      <button type="button" class="quick-chip" onclick="quickAsk('有什么体育比赛？')">有什么体育比赛？</button>
-      <button type="button" class="quick-chip" onclick="quickAsk('近期有哪些读书会？')">近期有哪些读书会？</button>
-      <button type="button" class="quick-chip" onclick="quickAsk('有志愿活动吗？')">有志愿活动吗？</button>
+
+    <!-- ========================================== -->
+    <!-- 3. 老师端主体（独立于学生端的三个功能板块） -->
+    <!-- ========================================== -->
+    <div class="page" id="page-teacher">
+        
+        <!-- 老师端顶部导航 -->
+        <nav class="teacher-nav" id="teacherNav">
+            <button id="tnav-activity" class="active" onclick="switchTeacherTab('activity')">录入活动</button>
+            <button id="tnav-manage" onclick="switchTeacherTab('manage')">活动管理</button>
+            <button id="tnav-question" onclick="switchTeacherTab('question')">问题回复</button>
+        </nav>
+
+        <!-- 板块1：录入活动表单 -->
+        <div class="teacher-pane active" id="tpane-activity">
+            <div class="card">
+                <h3>录入活动信息</h3>
+                <!-- 表单字段：活动基础信息 -->
+                <label>活动名称</label>
+                <input type="text" id="act-name" placeholder="如：哲学经典读书会">
+                
+                <label>开始时间</label>
+                <input type="datetime-local" id="act-time">
+                
+                <label>地点</label>
+                <input type="text" id="act-place" placeholder="如：振华楼B107">
+                
+                <label>报名方式</label>
+                <input type="text" id="act-signup" placeholder="如：扫码填表">
+                
+                <label>参与须知</label>
+                <textarea id="act-notice" placeholder="如：需提前阅读指定章节"></textarea>
+                
+                <label>链接（可选）</label>
+                <input type="text" id="act-link" placeholder="https://…">
+                
+                <!-- 提交表单：触发 submitActivity() 上传至飞书 -->
+                <button class="primary" onclick="submitActivity()">提交活动</button>
+            </div>
+        </div>
+
+        <!-- 板块2：活动管理（查看已录入的活动） -->
+        <div class="teacher-pane" id="tpane-manage">
+            <div class="card">
+                <h3>活动管理</h3>
+                <!-- 活动列表容器 -->
+                <div id="teacherActivityList">
+                    <div style="color:#999;font-size:13px;">加载中…</div>
+                </div>
+                <!-- 刷新按钮：重新拉取飞书数据 -->
+                <button class="primary" onclick="loadTeacherActivities()" style="background:#94a3b8;">刷新活动</button>
+            </div>
+        </div>
+
+        <!-- 板块3：问题回复（处理未解答问题） -->
+        <div class="teacher-pane" id="tpane-question">
+            
+            <!-- 待回复问题列表 -->
+            <div class="card">
+                <h3>待回复问题</h3>
+                <div id="questionList">
+                    <div style="color:#999;font-size:13px;">加载中…</div>
+                </div>
+                <button class="primary" onclick="loadQuestions()" style="background:#94a3b8;">刷新列表</button>
+            </div>
+            
+            <!-- 近期已回复列表 -->
+            <div class="card">
+                <h3>近期已回复</h3>
+                <div id="resolvedList">
+                    <div style="color:#999;font-size:13px;">加载中…</div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="inputBar" style="margin-top:10px;">
-      <input id="input" type="text" placeholder="输入你的问题…" onkeydown="if(event.key==='Enter') send()">
-      <button onclick="send()">发送</button>
+
+    <!-- ========================================== -->
+    <!-- 4. 全局弹窗与提示组件 -->
+    <!-- ========================================== -->
+    
+    <!-- 教师验证码弹窗（自定义 Modal） -->
+    <!-- 说明：不使用原生 prompt() 是因为 QQ/微信内置浏览器会拦截原生弹窗，导致点击"老师端"无反应。
+         自定义 DOM 元素（div/input/button）不会被任何浏览器拦截，体验一致。 -->
+    <div id="passcode-mask" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:12px;padding:22px 20px;width:85%;max-width:320px;box-shadow:0 8px 30px rgba(0,0,0,0.2);">
+            <h3 style="margin:0 0 6px;font-size:17px;">教师验证</h3>
+            <p style="margin:0 0 14px;color:#888;font-size:13px;">请输入教师验证码进入老师端</p>
+            
+            <!-- 验证码输入框：支持回车确认与 Esc 取消 -->
+            <input type="password" id="passcode-input" placeholder="请输入验证码" autocomplete="off"
+                   style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;"
+                   onkeydown="if(event.key==='Enter') confirmPasscode(); if(event.key==='Escape') closePasscodeModal();">
+            
+            <!-- 弹窗操作按钮 -->
+            <div style="display:flex;gap:10px;margin-top:16px;">
+                <button onclick="closePasscodeModal()" style="flex:1;padding:10px 0;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;color:#555;font-size:15px;">取消</button>
+                <button onclick="confirmPasscode()" class="primary" style="flex:1;margin-top:0;padding:10px 0;border:none;border-radius:8px;font-size:15px;">确认</button>
+            </div>
+        </div>
     </div>
-  </div>
-</div>
 
-<!-- ============ Tab2：活动时间表（时间轴） ============ -->
-<div class="main-page" id="page-timeline">
-  <div class="page-head">
-    <h3>📅 活动时间表</h3>
-  </div>
-  <div id="timelineList" class="timeline-list">
-    <div class="loading-state">正在加载活动…</div>
-  </div>
-</div>
+    <!-- 全局轻提示（Toast）容器（由 app.js 动态调用展示） -->
+    <div class="toast" id="toast"></div>
 
-<!-- ============ Tab3：往期回顾（网格） ============ -->
-<div class="main-page" id="page-review">
-  <div class="page-head">
-    <h3>🕰️ 往期回顾</h3>
-  </div>
-  <div id="reviewGrid" class="review-grid">
-    <div class="loading-state">正在加载往期活动…</div>
-  </div>
-</div>
-
-<!-- ============ 老师端（角色页，独立于学生端三 Tab） ============ -->
-<div class="page" id="page-teacher">
-  <!-- 老师端子板块导航 -->
-  <nav class="teacher-nav" id="teacherNav">
-    <button id="tnav-activity" class="active" onclick="switchTeacherTab('activity')">录入活动</button>
-    <button id="tnav-manage" onclick="switchTeacherTab('manage')">活动管理</button>
-    <button id="tnav-question" onclick="switchTeacherTab('question')">问题回复</button>
-  </nav>
-
-  <!-- 板块1：录入活动 -->
-  <div class="teacher-pane active" id="tpane-activity">
-    <div class="card">
-      <h3>录入活动信息</h3>
-      <label>活动名称</label>
-      <input type="text" id="act-name" placeholder="如：哲学经典读书会">
-      <label>开始时间</label>
-      <input type="datetime-local" id="act-time">
-      <label>地点</label>
-      <input type="text" id="act-place" placeholder="如：振华楼B107">
-      <label>报名方式</label>
-      <input type="text" id="act-signup" placeholder="如：扫码填表">
-      <label>参与须知</label>
-      <textarea id="act-notice" placeholder="如：需提前阅读指定章节"></textarea>
-      <label>链接（可选）</label>
-      <input type="text" id="act-link" placeholder="https://…">
-      <button class="primary" onclick="submitActivity()">提交活动</button>
-    </div>
-  </div>
-
-  <!-- 板块2：活动管理（在飞书打开编辑） -->
-  <div class="teacher-pane" id="tpane-manage">
-    <div class="card">
-      <h3>活动管理</h3>
-      <div id="teacherActivityList">
-        <div style="color:#999;font-size:13px;">加载中…</div>
-      </div>
-      <button class="primary" onclick="loadTeacherActivities()" style="background:#94a3b8;">刷新活动</button>
-    </div>
-  </div>
-
-  <!-- 板块3：问题回复（待回复 + 近期已回复可修改） -->
-  <div class="teacher-pane" id="tpane-question">
-    <div class="card">
-      <h3>待回复问题</h3>
-      <div id="questionList">
-        <div style="color:#999;font-size:13px;">加载中…</div>
-      </div>
-      <button class="primary" onclick="loadQuestions()" style="background:#94a3b8;">刷新列表</button>
-    </div>
-    <div class="card">
-      <h3>近期已回复</h3>
-      <div id="resolvedList">
-        <div style="color:#999;font-size:13px;">加载中…</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ 教师验证码弹窗（自定义 Modal） ============ -->
-<!-- 为什么不用 prompt()：QQ/微信内置浏览器会拦截原生弹窗，导致点"老师端"无反应。
-     自定义 DOM 元素（div/input/button）不会被任何浏览器拦截，体验一致。 -->
-<div id="passcode-mask" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:999;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:12px;padding:22px 20px;width:85%;max-width:320px;box-shadow:0 8px 30px rgba(0,0,0,0.2);">
-    <h3 style="margin:0 0 6px;font-size:17px;">教师验证</h3>
-    <p style="margin:0 0 14px;color:#888;font-size:13px;">请输入教师验证码进入老师端</p>
-    <input type="password" id="passcode-input" placeholder="请输入验证码" autocomplete="off"
-           style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:15px;outline:none;"
-           onkeydown="if(event.key==='Enter') confirmPasscode(); if(event.key==='Escape') closePasscodeModal();">
-    <div style="display:flex;gap:10px;margin-top:16px;">
-      <button onclick="closePasscodeModal()"
-              style="flex:1;padding:10px 0;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;color:#555;font-size:15px;">取消</button>
-      <button onclick="confirmPasscode()" class="primary"
-              style="flex:1;margin-top:0;padding:10px 0;border:none;border-radius:8px;font-size:15px;">确认</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- 引入脚本文件 -->
-<script src="app.js"></script>
+    <!-- 引入外部 JS 逻辑脚本 -->
+    <script src="app.js"></script>
 </body>
 </html>
