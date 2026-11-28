@@ -220,13 +220,18 @@ async function runCrawl() {
 
 // ---------- 路由 ----------
 router.post('/crawl/run', async (req, res) => {
-  // 简单触发保护：配置了 CRAWL_TOKEN 时，要求 query(?token=) 或 X-Crawl-Token 匹配
-  const expect = process.env.CRAWL_TOKEN;
-  if (expect) {
-    const given = req.query.token || req.headers['x-crawl-token'] || '';
-    if (String(given) !== String(expect)) {
-      return res.status(403).json({ success: false, error: '抓取令牌不匹配' });
-    }
+  // 两种合法触发方式：
+  // 1) 外部定时触发器：?token=<CRAWL_TOKEN> 或 X-Crawl-Token: <CRAWL_TOKEN>
+  // 2) 老师端页面「立即抓取一次」：X-Teacher-Token（前端已校验口令，这里再核对一次）
+  // CRAWL_TOKEN 是服务端密钥，不下发到浏览器；老师端按钮不需要知道它。
+  const crawlExpect = String(process.env.CRAWL_TOKEN || '');
+  const crawlGiven = String(req.query.token || req.headers['x-crawl-token'] || '');
+  const teacherExpect = String(process.env.TEACHER_PASSCODE || 'whu2026');
+  const teacherGiven = String(req.headers['x-teacher-token'] || '');
+  const crawlOk = !!crawlExpect && crawlGiven === crawlExpect;
+  const teacherOk = !!teacherGiven && teacherGiven === teacherExpect;
+  if (!crawlOk && !teacherOk) {
+    return res.status(403).json({ success: false, error: '抓取令牌或教师口令不匹配' });
   }
   try {
     const result = await runCrawl();

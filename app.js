@@ -354,6 +354,102 @@ async function submitPreference() {
   } catch (e) {
     last.textContent = '请求失败：' + e.message;
   }
+  // 推荐卡片直接从同一份活动表数据匹配，学生自己决定是否加入日程
+  await loadActivities(true);
+  addRecommendationCards(recommendActivities(times, interests));
+  chat.scrollTop = chat.scrollHeight;
+}
+
+/** 活动开始时间（北京时间）是否落在用户所选的空闲时段。 */
+function activityInFreeSlot(a, slot) {
+  if (!a || !a.start_ts || !slot || slot === '不限') return false;
+  const bj = new Date(Number(a.start_ts) + 8 * 3600 * 1000); // 时间戳转北京时间后取 UTC 分量
+  const day = bj.getUTCDay();  // 0=周日，6=周六
+  const hour = bj.getUTCHours();
+  const weekend = day === 0 || day === 6;
+  if (slot === '工作日晚上') return !weekend && hour >= 18;
+  if (slot === '周末上午') return weekend && hour < 12;
+  if (slot === '周末下午') return weekend && hour >= 12 && hour < 18;
+  if (slot === '周末晚上') return weekend && hour >= 18;
+  return false;
+}
+
+/** 活动是否命中某个兴趣分类：优先用结构化分类，旧数据回退到名称关键词。 */
+function activityMatchesInterest(a, interest) {
+  if (!a || !interest || interest === '不限') return false;
+  const cat = activityCategory(a).key;
+  return cat === interest || String(a.category || '') === interest || String(a.name || '').includes(interest);
+}
+
+/** 按兴趣 + 空闲时间从已发布活动里打分推荐，最多返回 6 条。 */
+function recommendActivities(times, interests) {
+  const all = (activitiesCache || []).filter(a => a && a.status === '已发布' &&
+    (!a.start_ts || a.start_ts >= Date.now()));
+  if (!all.length) return [];
+  const scored = all.map(a => {
+    const catHit = interests.some(i => activityMatchesInterest(a, i));
+    const timeHit = times.some(t => activityInFreeSlot(a, t));
+    return { a, score: (catHit ? 2 : 0) + (timeHit ? 2 : 0) };
+  }).filter(x => x.score > 0);
+  scored.sort((x, y) => {
+    if (y.score !== x.score) return y.score - x.score;
+    return (x.a.start_ts || Number.MAX_SAFE_INTEGER) - (y.a.start_ts || Number.MAX_SAFE_INTEGER);
+  });
+  return scored.slice(0, 6).map(x => x.a);
+}
+
+/** 在聊天区追加一组推荐活动卡片，每张卡片可单独加入/移出我的日程。 */
+function addRecommendationCards(list) {
+  const msg = document.createElement('div');
+  msg.className = 'msg ai rec-msg';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble rec-bubble';
+
+  const title = document.createElement('div');
+  title.className = 'rec-title';
+  title.textContent = list.length
+    ? '为你匹配到以下活动，可按需加入日程：'
+    : '暂时没有匹配到符合条件的活动，换个时间或兴趣试试～';
+  bubble.appendChild(title);
+
+  if (list.length) {
+    const grid = document.createElement('div');
+    grid.className = 'rec-grid';
+    list.forEach(a => {
+      const card = document.createElement('div');
+      card.className = 'rec-card';
+
+      const name = document.createElement('div');
+      name.className = 'rec-name';
+      name.textContent = activityCategory(a).icon + ' ' + (a.name || '（未命名活动）');
+
+      const meta = document.createElement('div');
+      meta.className = 'rec-meta';
+      meta.textContent = [scheduleWhenDisplay(a), a.place].filter(Boolean).join(' · ') || '时间地点待定';
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      const inSchedule = isInSchedule(a.record_id);
+      btn.className = 'rec-add-btn' + (inSchedule ? ' added' : '');
+      btn.textContent = inSchedule ? '✓ 已加日程' : '＋ 加入日程';
+      btn.addEventListener('click', () => {
+        const added = toggleSchedule(a.record_id);
+        btn.classList.toggle('added', added);
+        btn.textContent = added ? '✓ 已加日程' : '＋ 加入日程';
+        toast(added ? '已加入我的日程' : '已从我的日程移除');
+        if (currentMainTab === 'schedule') renderSchedule();
+      });
+
+      card.appendChild(name);
+      card.appendChild(meta);
+      card.appendChild(btn);
+      grid.appendChild(card);
+    });
+    bubble.appendChild(grid);
+  }
+
+  msg.appendChild(bubble);
+  chat.appendChild(msg);
   chat.scrollTop = chat.scrollHeight;
 }
 

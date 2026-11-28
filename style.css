@@ -1602,3 +1602,81 @@ header .tabs button:focus-visible {
     flex-wrap: wrap;
   }
 }
+
+/* 智能问答：按兴趣/空闲时间匹配出的推荐活动卡片 */
+.msg.ai.rec-msg .rec-bubble {
+  width: 100%;
+  max-width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--text);
+}
+
+.rec-title {
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 9px;
+}
+
+.rec-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+.rec-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.rec-meta {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.rec-add-btn {
+  align-self: flex-start;
+  padding: 5px 10px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+.rec-add-btn:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.rec-add-btn.added {
+  background: #ffffff;
+  color: var(--primary-dark);
+}
+
+@media (max-width: 600px) {
+  .rec-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .msg.ai.rec-msg .rec-bubble {
+    padding: 11px 12px;
+  }
+}

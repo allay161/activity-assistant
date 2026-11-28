@@ -13,6 +13,10 @@ const DEFAULT_SOURCES = [
   {
     label: '学院官网-通知公告',
     listUrl: 'https://philosophy.whu.edu.cn/xwzx/tzgg.htm'
+  },
+  {
+    label: '学院官网-通知公告公示',
+    listUrl: 'https://philosophy.whu.edu.cn/xxgk/tzgggs.htm'
   }
 ];
 

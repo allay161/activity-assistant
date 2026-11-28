@@ -38,7 +38,7 @@
 | `scf/routes/activityRecord.js` | `GET /api/get-one-activity` / `POST /api/update-activity` | 读取/更新单条活动（编辑弹窗、采集审核共用）；状态支持 已发布/已结束/待审核/已忽略，支持「分类」 |
 | `scf/routes/crawl.js` | `POST /api/crawl/run` | **活动自动采集**：抓取 `scf/crawlConfig.js` 配置的官网列表页 → 解析标题/日期/链接 → 去重 → 抓详情抽时间地点 → 按关键词预打分类 → 以状态=待审核写入活动表（来源/来源链接/抓取时间留档） |
 | `scf/routes/parseArticle.js` | `POST /api/parse-article` | **公众号文章解析**：解析微信推文链接的标题/账号/发布时间/正文摘要 |
-| `scf/crawlConfig.js` | — | 采集信息源配置（默认：学院官网-学术信息、通知公告；可用环境变量 `CRAWL_SOURCES` 覆盖） |
+| `scf/crawlConfig.js` | — | 采集信息源配置（默认：学院官网-学术信息、通知公告、通知公告公示；可用环境变量 `CRAWL_SOURCES` 覆盖） |
 | `scf/feishuUrl.js` | — | 拼飞书单条记录深链（活动表用 `FEISHU_TABLE_A`，问题表用 `FEISHU_TABLE_Q`） |
 | `GET /healthz` | — | 健康检查，返回 `{"ok":true,...}` |
 
@@ -63,7 +63,8 @@
 | `FEISHU_SHEET_URL` | 活动表与问题表所在的**同一个**多维表格的浏览器链接（含 app_token） | 老师端【在飞书打开】用；从浏览器地址栏复制整条 URL 即可。两张表在同一个多维表格里、只是 table_id 不同，后端会分别用 `FEISHU_TABLE_A` / `FEISHU_TABLE_Q` 覆盖 `table` 参数，并补上 `record` 定位到单条记录。不配置则按钮会提示未配置 |
 | `BAILIAN_API_KEY` | 百炼 / 通义 DashScope API Key | 由 `chat.js` 安全读取并转发到 DashScope（前端已不再直连） |
 | `BAILIAN_APP_ID` | 百炼 / DashScope 应用 ID | DashScope 补全接口 URL 中的 `{app_id}`（`chat.js` 使用） |
-| `CRAWL_TOKEN` | （可选）采集触发令牌 | 配置后 `POST /api/crawl/run` 必须带 `?token=xxx` 或 `X-Crawl-Token` 头，防止被任意触发；不配置则不校验 |
+| `CRAWL_TOKEN` | 采集触发令牌（供外部定时器使用） | 定时触发器调用 `POST /api/crawl/run?token=xxx` 或带 `X-Crawl-Token` 头；该密钥只在服务端，不下发浏览器 |
+| `TEACHER_PASSCODE` | （可选）教师口令，用于老师端页面手动触发采集 | 不配置时默认 `whu2026`（与前端常量一致）；修改前端口令时请同步配置此项。页面按钮发送 `X-Teacher-Token`，与 `CRAWL_TOKEN` 任一匹配即可触发 |
 
 ### 新增功能的两项一次性配置
 
@@ -82,7 +83,7 @@
 1. CloudBase 控制台 → 云函数 → 新建函数（运行环境 Node.js 18+，无需依赖）。
 2. 函数代码只需一行逻辑（伪代码）：`fetch('https://<你的云托管域名>/api/crawl/run?token=<CRAWL_TOKEN>', { method: 'POST' })`。
 3. 创建**定时触发器**：如 `0 0 8,12,18,21 * * * *`（每天 8/12/18/21 点各一次，CloudBase cron 为 7 位表达式）。
-4. 也可以在老师端「采集审核」板块点「⚡ 立即抓取一次」手动触发，日常临时补抓无需等定时。
+4. 也可以在老师端「采集审核」板块点「⚡ 立即抓取一次」手动触发，日常临时补抓无需等定时。该按钮使用教师口令（`X-Teacher-Token`）鉴权，不需要在前端填写 `CRAWL_TOKEN`。
 
 ### 本地调试
 在 `scf/` 目录下 `npm install` 安装依赖，再设置环境变量后 `npm start`（监听 9000）：
