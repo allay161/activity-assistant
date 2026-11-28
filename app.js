@@ -358,23 +358,70 @@ async function submitPreference() {
 }
 
 // ---------- 老师端 ----------
+/** 北京时间文本，用于「抓取时间」审计字段默认值。 */
+function beijingNowText() {
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+  }).format(new Date()).replace(/\//g, '-');
+}
+
+/** 录入方式切换：direct 显示完整表单，wechat 显示解析入口。 */
+function switchEntryMode(mode) {
+  const isWechat = mode === 'wechat';
+  const directBtn = document.getElementById('entryModeDirect');
+  const wechatBtn = document.getElementById('entryModeWechat');
+  const formBox = document.getElementById('activityFormBox');
+  const wxBox = document.getElementById('wxParseBox');
+  if (directBtn) directBtn.classList.toggle('active', !isWechat);
+  if (wechatBtn) wechatBtn.classList.toggle('active', isWechat);
+  if (formBox) formBox.style.display = isWechat ? 'none' : '';
+  if (wxBox) wxBox.style.display = isWechat ? '' : 'none';
+}
+
+/** 清空录入表单，并恢复「来源 / 抓取时间」的默认值。 */
+function resetActivityForm() {
+  ['act-name','act-time','act-place','act-signup','act-notice','act-link','act-source-url'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const source = document.getElementById('act-source');
+  if (source) source.value = '人工录入';
+  const crawlTime = document.getElementById('act-crawl-time');
+  if (crawlTime) crawlTime.value = beijingNowText();
+  const status = document.getElementById('act-status');
+  if (status) status.value = '已发布';
+  const wxUrl = document.getElementById('wx-article-url');
+  if (wxUrl) wxUrl.value = '';
+}
+
 /**
- * 读取表单并提交活动；校验名称和时间，提交时禁用按钮，成功后清空表单及缓存。
+ * 读取表单并提交活动；校验名称、时间与溯源字段，提交成功后清空表单及缓存。
  */
 async function submitActivity() {
   const timeRaw = document.getElementById('act-time').value; // YYYY-MM-DDTHH:mm，不含时区
+  const get = id => (document.getElementById(id)?.value || '').trim();
   const payload = {
-    name: document.getElementById('act-name').value,
-    category: document.getElementById('act-category')?.value || '',
+    name: get('act-name'),
+    category: get('act-category'),
+    status: get('act-status') || '已发布',
     time: timeRaw,
     // 毫秒时间戳：请后端优先使用 time_ts
-    time_ts: timeRaw ? new Date(timeRaw).getTime() : '',
-    place: document.getElementById('act-place').value,
-    signup: document.getElementById('act-signup').value,
-    notice: document.getElementById('act-notice').value,
-    link: document.getElementById('act-link').value
+    time_ts: timeRaw ? datetimeLocalToTs(timeRaw) : '',
+    place: get('act-place'),
+    signup: get('act-signup'),
+    notice: get('act-notice'),
+    link: get('act-link'),
+    source: get('act-source'),
+    source_url: get('act-source-url'),
+    crawl_time: get('act-crawl-time')
   };
   if (!payload.name || !payload.time) { toast('请填写活动名称和时间'); return; }
+  if (!payload.source) { toast('请填写来源（采集溯源）'); return; }
+  // 来源链接必填（去重依据）：为空时退回到活动链接，仍为空则提示
+  if (!payload.source_url && payload.link) payload.source_url = payload.link;
+  if (!payload.source_url) { toast('请填写来源链接（去重依据）'); return; }
+  if (!payload.crawl_time) { toast('请填写抓取时间（审计留档）'); return; }
 
   const btn = Array.from(document.querySelectorAll('#page-teacher button'))
     .find(b => b.textContent.includes('提交活动'));
@@ -388,7 +435,7 @@ async function submitActivity() {
     const data = await res.json();
     if (data.success) {
       toast('活动提交成功！');
-      ['act-name','act-time','act-place','act-signup','act-notice','act-link'].forEach(id => document.getElementById(id).value = '');
+      resetActivityForm();
       activitiesCache = null; // 活动数据变了，清缓存
     } else {
       const detail = (data.data && data.data.msg) || data.error || '请检查网络';
@@ -480,8 +527,8 @@ function validateActivityPayload(payload) {
     toast('请填写有效的开始时间');
     return false;
   }
-  if (!['已发布', '已结束'].includes(payload.status)) {
-    toast('状态只能选择“已发布”或“已结束”');
+  if (!['已发布', '已结束', '待审核', '已忽略'].includes(payload.status)) {
+    toast('状态只能选择“已发布”“已结束”“待审核”或“已忽略”');
     return false;
   }
   return true;
@@ -620,7 +667,7 @@ function fillActivityEditModal(snapshot) {
   document.getElementById('modal-act-notice').value = snapshot.notice || '';
   document.getElementById('modal-act-link').value = snapshot.link || '';
   document.getElementById('modal-act-status').value =
-    ['已发布', '已结束'].includes(snapshot.status) ? snapshot.status : '已发布';
+    ['已发布', '已结束', '待审核', '已忽略'].includes(snapshot.status) ? snapshot.status : '已发布';
 }
 
 /**
@@ -975,7 +1022,7 @@ async function runCrawlNow(btn) {
   }
 }
 
-/** 解析公众号文章链接，把标题/内容摘要填进录入表单。 */
+/** 解析公众号文章链接，把标题/内容摘要及溯源字段填进录入表单。 */
 async function parseWechatArticle() {
   const input = document.getElementById('wx-article-url');
   const url = (input?.value || '').trim();
@@ -994,6 +1041,11 @@ async function parseWechatArticle() {
       const nameEl = document.getElementById('act-name');
       const noticeEl = document.getElementById('act-notice');
       const linkEl = document.getElementById('act-link');
+      const sourceEl = document.getElementById('act-source');
+      const sourceUrlEl = document.getElementById('act-source-url');
+      const crawlTimeEl = document.getElementById('act-crawl-time');
+      const statusEl = document.getElementById('act-status');
+
       if (nameEl && !nameEl.value.trim()) nameEl.value = d.title;
       if (noticeEl && !noticeEl.value.trim()) {
         noticeEl.value = [d.account ? '来源公众号：' + d.account : '',
@@ -1001,7 +1053,14 @@ async function parseWechatArticle() {
                           d.content_preview].filter(Boolean).join('\n');
       }
       if (linkEl) linkEl.value = d.url;
-      toast('已填入「' + d.title.slice(0, 15) + '…」，请补齐时间与地点后提交');
+      if (sourceEl) sourceEl.value = d.account ? '公众号：' + d.account : '微信公众号';
+      if (sourceUrlEl) sourceUrlEl.value = d.url;
+      if (crawlTimeEl) crawlTimeEl.value = beijingNowText();
+      if (statusEl) statusEl.value = '已发布';
+
+      // 解析完成后切回可编辑表单，标题与溯源字段已带出
+      switchEntryMode('direct');
+      toast('已填入「' + String(d.title || '').slice(0, 15) + '…」，请补齐时间与地点后提交');
     } else {
       toast('解析失败：' + (data.error || '未知错误'));
     }
@@ -1549,6 +1608,8 @@ window.addEventListener('beforeunload', function (e) {
 // 首屏预拉一次活动，保证数据就绪；切换 Tab 时再强制刷新
 loadActivities().then(() => {
   renderCategorySelects(); // 录入表单与编辑弹窗的分类下拉
+  switchEntryMode('direct'); // 录入方式默认「直接录入」
+  resetActivityForm();       // 来源默认「人工录入」、抓取时间默认当前北京时间
   renderTimeline();
   renderSchedule();
   renderReview();

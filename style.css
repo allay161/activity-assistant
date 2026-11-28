@@ -1336,6 +1336,43 @@ header .tabs button:focus-visible {
   font-weight: 700;
 }
 
+/* 录入方式切换：直接录入 / 从公众号文章快速填入 */
+.entry-mode-switch {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.entry-mode-btn {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .18s ease;
+}
+
+.entry-mode-btn:hover {
+  color: var(--text);
+}
+
+.entry-mode-btn.active {
+  background: #ffffff;
+  color: var(--primary-dark);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, .12);
+}
+
+.wx-parse-box {
+  margin-bottom: 6px;
+}
+
 /* 老师端：分类下拉、公众号解析、采集审核 */
 .category-select,
 #wx-article-url {
@@ -1359,6 +1396,56 @@ header .tabs button:focus-visible {
   color: var(--muted);
   margin-bottom: 10px;
   line-height: 1.6;
+}
+
+/* 采集审核标题旁的小问号：鼠标悬停或键盘聚焦时显示说明 */
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+  vertical-align: middle;
+}
+
+.info-tip:hover,
+.info-tip:focus {
+  background: var(--primary);
+  color: #ffffff;
+  outline: none;
+}
+
+.info-tip-text {
+  display: none;
+  position: absolute;
+  left: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 290px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: normal;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .2);
+  z-index: 30;
+}
+
+.info-tip:hover .info-tip-text,
+.info-tip:focus .info-tip-text {
+  display: block;
 }
 
 .wx-parse-card {

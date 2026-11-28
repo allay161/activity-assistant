@@ -52,10 +52,12 @@
             <label>兴趣偏好（可多选）</label>
             <!-- 兴趣标签组：点击触发 toggleChip() 切换选中状态 -->
             <div class="chip-group" id="interestChips">
-                <div class="chip" onclick="toggleChip(this)">讲座🎓</div>
-                <div class="chip" onclick="toggleChip(this)">文体🏀</div>
-                <div class="chip" onclick="toggleChip(this)">读书📖</div>
-                <div class="chip" onclick="toggleChip(this)">志愿🤝</div>
+                <div class="chip" onclick="toggleChip(this)">志愿服务</div>
+                <div class="chip" onclick="toggleChip(this)">竞赛活动</div>
+                <div class="chip" onclick="toggleChip(this)">讲座</div>
+                <div class="chip" onclick="toggleChip(this)">文体</div>
+                <div class="chip" onclick="toggleChip(this)">读书</div>
+                <div class="chip" onclick="toggleChip(this)">其他</div>
             </div>
             <!-- 提交偏好按钮：收集标签数据并请求推荐 -->
             <button class="primary" onclick="submitPreference()">获取推荐活动</button>
@@ -106,7 +108,6 @@
     <div class="main-page" id="page-schedule">
         <div class="page-head">
             <h3>🗓️ 我的日程</h3>
-            <p>在「活动时间表」点卡片上的「＋日程」收藏活动；时间冲突会自动提醒，可一键导出到手机/电脑日历。</p>
         </div>
         <!-- 工具栏：导出 ics 按钮 + 统计（由 app.js 渲染） -->
         <div class="schedule-toolbar">
@@ -143,44 +144,69 @@
             <button id="tnav-question" onclick="switchTeacherTab('question')">问题回复</button>
         </nav>
 
-        <!-- 板块1：录入活动表单 -->
+        <!-- 板块1：录入活动表单（两种方式：直接录入 / 从公众号文章快速填入） -->
         <div class="teacher-pane active" id="tpane-activity">
             <div class="card">
                 <h3>录入活动信息</h3>
-                <!-- 表单字段：活动基础信息 -->
-                <label>活动名称</label>
-                <input type="text" id="act-name" placeholder="如：哲学经典读书会">
-                
-                <label>分类</label>
-                <!-- 分类下拉：与飞书活动表「分类」单选字段对应，选项由 app.js 渲染 -->
-                <select id="act-category" class="category-select"></select>
-                
-                <label>开始时间</label>
-                <input type="datetime-local" id="act-time">
-                
-                <label>地点</label>
-                <input type="text" id="act-place" placeholder="如：振华楼B107">
-                
-                <label>报名方式</label>
-                <input type="text" id="act-signup" placeholder="如：扫码填表">
-                
-                <label>参与须知</label>
-                <textarea id="act-notice" placeholder="如：需提前阅读指定章节"></textarea>
-                
-                <label>链接（可选）</label>
-                <input type="text" id="act-link" placeholder="https://…">
-                
-                <!-- 提交表单：触发 submitActivity() 上传至飞书 -->
-                <button class="primary" onclick="submitActivity()">提交活动</button>
-            </div>
+                <!-- 录入方式切换 -->
+                <div class="entry-mode-switch" id="entryModeSwitch">
+                    <button type="button" class="entry-mode-btn active" id="entryModeDirect" onclick="switchEntryMode('direct')">直接录入</button>
+                    <button type="button" class="entry-mode-btn" id="entryModeWechat" onclick="switchEntryMode('wechat')">从公众号文章快速填入</button>
+                </div>
 
-            <!-- 公众号文章快速填入：粘贴"哲样青春"等推文链接，自动解析标题/内容预填表单 -->
-            <div class="card wx-parse-card">
-                <h3>从公众号文章快速填入</h3>
-                <p class="muted-hint">粘贴公众号推文链接（mp.weixin.qq.com/s/…），系统自动解析标题与正文，填入上方表单后补齐时间地点即可提交。</p>
-                <div class="wx-parse-row">
-                    <input type="text" id="wx-article-url" placeholder="https://mp.weixin.qq.com/s/…">
-                    <button type="button" class="act-open-btn" onclick="parseWechatArticle()">解析填入</button>
+                <!-- 公众号解析区：仅在「从公众号文章快速填入」模式显示 -->
+                <div id="wxParseBox" class="wx-parse-box" style="display:none;">
+                    <label>公众号文章链接</label>
+                    <div class="wx-parse-row">
+                        <input type="text" id="wx-article-url" placeholder="https://mp.weixin.qq.com/s/…">
+                        <button type="button" class="act-open-btn" onclick="parseWechatArticle()">解析填入</button>
+                    </div>
+                    <p class="muted-hint">粘贴推文链接后点「解析填入」，系统会自动带出标题、公众号与原文链接，再补齐时间地点即可提交。</p>
+                </div>
+
+                <!-- 录入表单：两种方式共用，公众号解析成功后切回本表单并预填 -->
+                <div id="activityFormBox">
+                    <label>活动名称</label>
+                    <input type="text" id="act-name" placeholder="如：哲学经典读书会">
+
+                    <label>分类</label>
+                    <!-- 分类下拉：与飞书活动表「分类」单选字段对应，选项由 app.js 渲染 -->
+                    <select id="act-category" class="category-select"></select>
+
+                    <label>状态</label>
+                    <select id="act-status" class="category-select">
+                        <option value="已发布">已发布</option>
+                        <option value="已结束">已结束</option>
+                        <option value="待审核">待审核</option>
+                        <option value="已忽略">已忽略</option>
+                    </select>
+
+                    <label>开始时间</label>
+                    <input type="datetime-local" id="act-time">
+
+                    <label>地点</label>
+                    <input type="text" id="act-place" placeholder="如：振华楼B107">
+
+                    <label>报名方式</label>
+                    <input type="text" id="act-signup" placeholder="如：扫码填表">
+
+                    <label>参与须知</label>
+                    <textarea id="act-notice" placeholder="如：需提前阅读指定章节"></textarea>
+
+                    <label>链接（可选）</label>
+                    <input type="text" id="act-link" placeholder="https://…">
+
+                    <label>来源（必填，采集溯源）</label>
+                    <input type="text" id="act-source" placeholder="如：人工录入 / 学院官网 / 哲样青春">
+
+                    <label>来源链接（必填，去重依据）</label>
+                    <input type="text" id="act-source-url" placeholder="https://…">
+
+                    <label>抓取时间（必填，审计留档）</label>
+                    <input type="text" id="act-crawl-time" placeholder="如：2026-11-28 16:30">
+
+                    <!-- 提交表单：触发 submitActivity() 上传至飞书 -->
+                    <button class="primary" onclick="submitActivity()">提交活动</button>
                 </div>
             </div>
         </div>
@@ -208,8 +234,7 @@
         <!-- 板块3：采集审核（官网自动采集的候选活动，人工审核后发布） -->
         <div class="teacher-pane" id="tpane-collect">
             <div class="card">
-                <h3>采集审核</h3>
-                <p class="muted-hint">系统定时从学院官网等公开渠道自动采集活动（状态为「待审核」），在这里核对/补齐时间地点后「通过发布」，或「忽略」丢弃。发布前学生端不会显示这些活动。</p>
+                <h3>采集审核 <span class="info-tip" tabindex="0">?<span class="info-tip-text">系统定时从学院官网等公开渠道自动采集活动（状态为「待审核」），在这里核对/补齐时间地点后「通过发布」，或「忽略」丢弃。发布前学生端不会显示这些活动。</span></span></h3>
                 <div class="collect-actions">
                     <button type="button" class="primary" onclick="runCrawlNow(this)">⚡ 立即抓取一次</button>
                     <button type="button" class="primary" style="background:#94a3b8;" onclick="loadCollectList()">刷新候选列表</button>
@@ -266,6 +291,8 @@
                     <select id="modal-act-status">
                         <option value="已发布">已发布</option>
                         <option value="已结束">已结束</option>
+                        <option value="待审核">待审核</option>
+                        <option value="已忽略">已忽略</option>
                     </select>
                 </div>
                 <div class="act-edit-field span-2">
