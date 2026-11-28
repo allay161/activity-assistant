@@ -1611,9 +1611,9 @@ function renderSchedule() {
 }
 
 // ---------- 标准 ics 日历导出 ----------
-/** 毫秒时间戳 -> ics UTC 格式（YYYYMMDDTHHMMSSZ，UTC 与北京时间相差 8 小时）。 */
+/** 毫秒时间戳 -> ics UTC 格式（YYYYMMDDTHHMMSSZ）；时间戳本身是绝对时刻，直接取 UTC 分量即可。 */
 function icsUtc(ts) {
-  const d = new Date(Number(ts) - 8 * 3600 * 1000);
+  const d = new Date(Number(ts));
   return d.getUTCFullYear()
     + String(d.getUTCMonth() + 1).padStart(2, '0')
     + String(d.getUTCDate()).padStart(2, '0')
