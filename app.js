@@ -615,8 +615,8 @@ function fillActivityEditModal(snapshot) {
 }
 
 /**
- * 打开编辑弹窗：先填入当前表格中已展示的内容；
- * 后台再尝试用 get-one-activity 拉取最新记录，失败时保留表格当前内容。
+ * 打开编辑弹窗：直接用当前表格中已展示的内容预填，打开后不再异步覆盖。
+ * 需要飞书最新数据时，先点【刷新活动】再打开弹窗。
  */
 async function openActivityEditModal(recordId) {
   const mask = document.getElementById('activityEditMask');
@@ -632,21 +632,6 @@ async function openActivityEditModal(recordId) {
   activityState.modalOriginal = snapshot;
   fillActivityEditModal(snapshot);
   mask.style.display = 'flex';
-
-  try {
-    const res = await fetch(BASE_URL + '/api/get-one-activity?record_id=' + encodeURIComponent(recordId));
-    const data = await res.json();
-    if (data.success && data.data) {
-      const fresh = activitySnapshot(data.data);
-      // 用户尚未改动弹窗时才用最新数据覆盖，避免打断输入
-      if (!activityFieldsDiffer(snapshot, collectModalFields())) {
-        activityState.modalOriginal = fresh;
-        fillActivityEditModal(fresh);
-      }
-    }
-  } catch (e) {
-    // 读取失败不影响弹窗：继续使用表格中已有的内容
-  }
 }
 
 /** 关闭编辑弹窗；有未保存修改时先确认。 */

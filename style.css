@@ -1096,6 +1096,11 @@ header .tabs button:focus-visible {
   gap: 12px;
 }
 
+/* 编辑弹窗去掉标题后，关闭按钮靠右 */
+#activityEditMask .modal-head {
+  justify-content: flex-end;
+}
+
 .modal-head h3,
 .confirm-card h3 {
   font-size: 17px;

@@ -196,14 +196,12 @@
     <!-- 4. 全局弹窗与提示组件 -->
     <!-- ========================================== -->
 
-    <!-- 编辑弹窗（独立入口）：与行内编辑并存，不替换行内编辑 -->
+    <!-- 编辑弹窗：直接用当前列表中的内容预填，打开后不再异步覆盖 -->
     <div id="activityEditMask" class="modal-mask" style="display:none;">
         <div class="modal-card">
             <div class="modal-head">
-                <h3>点击编辑</h3>
                 <button type="button" class="modal-close" onclick="closeActivityEditModal()" aria-label="关闭">×</button>
             </div>
-            <p class="modal-sub">数据来自飞书活动表，保存后写回原记录。</p>
             <div class="act-edit-grid">
                 <div class="act-edit-field span-2">
                     <label for="modal-act-name">活动名称</label>
