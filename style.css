@@ -428,6 +428,9 @@ button.primary:active{transform:translateY(1px);box-shadow:0 2px 6px rgba(24, 16
   border-bottom:1px solid var(--line);padding:11px 0;
 }
 .act-item:last-child{border-bottom:none;}
+/* 已结束的活动整体标灰（文字、按钮一并降饱和度），与进行中的活动区分。 */
+.act-item-ended{opacity:.5;filter:grayscale(1);}
+.act-item-ended:hover{opacity:.85;}
 .act-info{min-width:0;flex:1;}
 /* 活动名称保持单行，超出宽度时以省略号显示。 */
 .act-name{font-size:14px;color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}

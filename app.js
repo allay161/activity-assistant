@@ -684,7 +684,8 @@ function openFeishuTable() {
 /** 生成只读活动行：每行只保留【点击编辑】入口，飞书入口全页仅一个。 */
 function buildReadOnlyActivityRow(a) {
   const row = document.createElement('div');
-  row.className = 'act-item';
+  // 已结束的活动整体标灰，与仍在进行的已发布活动区分。
+  row.className = a.status === '已结束' ? 'act-item act-item-ended' : 'act-item';
 
   const info = document.createElement('div');
   info.className = 'act-info';
@@ -1168,7 +1169,7 @@ async function parseWechatArticle() {
   } catch (e) {
     toast('解析失败：' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '解析填入'; }
+    if (btn) { btn.disabled = false; btn.textContent = '解析'; }
   }
 }
 
