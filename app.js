@@ -1506,13 +1506,14 @@ function toggleSchedule(recordId) {
   ids.splice(idx, 1); setScheduleIds(ids); return false;
 }
 
-/** 我的日程对应的活动列表（按 record_id 对齐活动表，已发布优先、隐藏已失效项）。 */
+/** 我的日程对应的活动列表（按 record_id 对齐活动表，只保留当前有效的已发布活动）。 */
 function getScheduleActivities() {
   const ids = getScheduleIds();
   const map = new Map((activitiesCache || []).map(a => [a.record_id, a]));
   return ids
     .map(id => map.get(id))
-    .filter(Boolean)
+    // 老师改成待审核/已忽略/已结束的活动不再展示，也不进入冲突检测和 ics 导出
+    .filter(a => a && a.status === '已发布')
     .sort((x, y) => (x.start_ts || Number.MAX_SAFE_INTEGER) - (y.start_ts || Number.MAX_SAFE_INTEGER));
 }
 
