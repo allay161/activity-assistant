@@ -150,29 +150,23 @@
             </div>
         </div>
 
-        <!-- 板块2：活动管理（默认只读；可开启编辑模式行内修改） -->
+        <!-- 板块2：活动管理 -->
         <div class="teacher-pane" id="tpane-manage">
             <div class="card">
                 <div class="manage-head">
                     <div>
                         <h3>活动管理</h3>
-                        <p class="manage-sub">默认只读，可开启编辑模式修改活动信息。</p>
                     </div>
-                    <!-- 编辑模式开关：打开后列表就地变为表单，关闭后恢复只读 -->
-                    <label class="edit-switch" for="activityEditToggle">
-                        <input type="checkbox" id="activityEditToggle" onchange="toggleActivityEditMode(this.checked)">
-                        <span class="switch-track"><span class="switch-thumb"></span></span>
-                        <span class="switch-label">开启编辑模式</span>
-                    </label>
                 </div>
-                <!-- 未保存提示：由 app.js 根据表单改动状态更新 -->
-                <div id="activityEditStatus" class="edit-status" aria-live="polite"></div>
-                <!-- 活动列表容器：只读 / 编辑两种形态由 app.js 渲染 -->
+                <!-- 活动列表容器：只读列表，由 app.js 渲染 -->
                 <div id="teacherActivityList">
                     <div style="color:#999;font-size:13px;">加载中…</div>
                 </div>
-                <!-- 刷新按钮：未保存修改时会先弹出确认 -->
-                <button class="primary" onclick="loadTeacherActivities(true)" style="background:#94a3b8;">刷新活动</button>
+                <!-- 全页仅一个飞书入口，与刷新按钮并列 -->
+                <div class="manage-actions">
+                    <button type="button" class="act-open-btn" onclick="openFeishuTable()">在飞书打开</button>
+                    <button type="button" class="primary" onclick="loadTeacherActivities()" style="background:#94a3b8;">刷新活动</button>
+                </div>
             </div>
         </div>
 
@@ -206,7 +200,7 @@
     <div id="activityEditMask" class="modal-mask" style="display:none;">
         <div class="modal-card">
             <div class="modal-head">
-                <h3>编辑活动</h3>
+                <h3>点击编辑</h3>
                 <button type="button" class="modal-close" onclick="closeActivityEditModal()" aria-label="关闭">×</button>
             </div>
             <p class="modal-sub">数据来自飞书活动表，保存后写回原记录。</p>
@@ -250,7 +244,7 @@
         </div>
     </div>
 
-    <!-- 通用确认弹窗：未保存修改时切换页面 / 关闭编辑模式等防误操作 -->
+    <!-- 通用确认弹窗：未保存修改时切换页面 / 关闭编辑弹窗等防误操作 -->
     <div id="confirmMask" class="modal-mask" style="display:none;">
         <div class="modal-card confirm-card">
             <h3 id="confirmTitle">提示</h3>

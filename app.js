@@ -51,7 +51,7 @@ async function switchRole(name) {
       hasAnyUnsavedActivityChanges()) {
     const ok = await askConfirm('活动列表中有未保存的修改，离开老师端会丢弃这些修改。确定继续吗？', '未保存的修改');
     if (!ok) return;
-    resetActivityEditState();
+    resetActivityEditorState();
   }
 
   // 老师端口令验证（sessionStorage 会话级记忆，验证通过后本次会话不再重复询问）
@@ -160,7 +160,7 @@ async function switchTeacherTab(name) {
       hasAnyUnsavedActivityChanges()) {
     const ok = await askConfirm('活动列表中有未保存的修改，切换板块会丢弃这些修改。确定继续吗？', '未保存的修改');
     if (!ok) return; // 用户取消时保持当前板块不变
-    resetActivityEditState();
+    resetActivityEditorState();
   }
 
   document.querySelectorAll('.teacher-pane').forEach(p => p.classList.remove('active'));
@@ -396,16 +396,12 @@ async function submitActivity() {
   }
 }
 
-// 老师端活动管理状态：默认只读；开启后行内编辑；同时保留独立编辑弹窗入口
-const activityEditState = {
-  enabled: false,
+// 老师端活动管理：默认只读列表，仅通过【点击编辑】弹窗修改；飞书入口全页仅一个
+const activityState = {
   list: [],                 // 当前展示的活动（已按开始时间倒序）
-  originals: {},            // record_id -> 原始字段快照，用于取消与脏检查
   modalRecordId: '',        // 编辑弹窗当前记录
-  modalOriginal: null       // 编辑弹窗原始快照
+  modalOriginal: null       // 编辑弹窗打开时的字段快照，用于脏检查
 };
-
-const ACTIVITY_FIELDS = ['name', 'start_ts', 'place', 'signup', 'notice', 'link', 'status'];
 
 /**
  * 把飞书毫秒时间戳转换成 datetime-local 需要的本地时间字符串（按北京时间显示）。
@@ -437,14 +433,7 @@ function datetimeLocalToTs(value) {
   return new Date(`${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:00+08:00`).getTime();
 }
 
-/** HTML 属性转义，避免活动内容里的引号破坏结构。 */
-function escapeAttr(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-/** 取活动字段快照；所有字段统一为标准字符串 / 时间戳。 */
+/** 取活动字段快照，统一为标准字符串 / 时间戳。 */
 function activitySnapshot(a) {
   return {
     name: a.name || '',
@@ -459,21 +448,8 @@ function activitySnapshot(a) {
 
 /** 比较两个活动字段对象是否不同。 */
 function activityFieldsDiffer(a, b) {
-  return ACTIVITY_FIELDS.some(k => String(a[k] || '') !== String(b[k] || ''));
-}
-
-/** 读取某一行的行内表单值。 */
-function collectInlineFields(recordId) {
-  const get = field => document.getElementById(`inline-${field}-${recordId}`);
-  return {
-    name: (get('name')?.value || '').trim(),
-    start_ts: datetimeLocalToTs(get('time')?.value || ''),
-    place: (get('place')?.value || '').trim(),
-    signup: (get('signup')?.value || '').trim(),
-    notice: (get('notice')?.value || '').trim(),
-    link: (get('link')?.value || '').trim(),
-    status: get('status')?.value || '已发布'
-  };
+  return ['name', 'start_ts', 'place', 'signup', 'notice', 'link', 'status']
+    .some(k => String(a[k] || '') !== String(b[k] || ''));
 }
 
 /** 读取编辑弹窗中的表单值。 */
@@ -504,55 +480,18 @@ function validateActivityPayload(payload) {
   return true;
 }
 
-/** 某行是否与原始快照不同。 */
-function isActivityRowDirty(recordId) {
-  const original = activityEditState.originals[recordId];
-  if (!original) return false;
-  const exists = document.getElementById(`inline-name-${recordId}`);
-  if (!exists) return false;
-  return activityFieldsDiffer(original, collectInlineFields(recordId));
-}
-
-/** 是否存在未保存的行内修改。 */
-function hasUnsavedActivityChanges() {
-  if (!activityEditState.enabled) return false;
-  return activityEditState.list.some(a => isActivityRowDirty(a.record_id));
-}
-
 /** 编辑弹窗是否有未保存修改。 */
 function isActivityModalDirty() {
-  if (!activityEditState.modalRecordId || !activityEditState.modalOriginal) return false;
+  if (!activityState.modalRecordId || !activityState.modalOriginal) return false;
   const mask = document.getElementById('activityEditMask');
   if (!mask || mask.style.display === 'none') return false;
-  return activityFieldsDiffer(activityEditState.modalOriginal, collectModalFields());
+  return activityFieldsDiffer(activityState.modalOriginal, collectModalFields());
 }
 
-/** 是否存在任何未保存的活动修改（行内编辑 + 编辑弹窗）。 */
+/** 是否存在任何未保存的活动修改（目前只有编辑弹窗一种入口）。 */
 function hasAnyUnsavedActivityChanges() {
-  return hasUnsavedActivityChanges() || isActivityModalDirty();
+  return isActivityModalDirty();
 }
-
-/** 更新页面顶部的编辑状态提示。 */
-function updateActivityDirtyStatus() {
-  const el = document.getElementById('activityEditStatus');
-  if (!el) return;
-  if (!activityEditState.enabled) {
-    el.className = 'edit-status';
-    el.textContent = '';
-    return;
-  }
-  const dirtyCount = activityEditState.list.filter(a => isActivityRowDirty(a.record_id)).length;
-  if (dirtyCount) {
-    el.className = 'edit-status show dirty';
-    el.textContent = `有 ${dirtyCount} 项活动存在未保存修改，切换页面或关闭编辑模式前请先保存。`;
-  } else {
-    el.className = 'edit-status show';
-    el.textContent = '编辑模式已开启';
-  }
-}
-
-/** 表单变动时刷新未保存提示。 */
-function markActivityDirty() { updateActivityDirtyStatus(); }
 
 /** 通用确认弹窗，返回 Promise<boolean>；避免部分内置浏览器拦截原生 confirm。 */
 function askConfirm(message, title = '提示') {
@@ -574,17 +513,23 @@ function resolveConfirm(result) {
   if (resolve) resolve(result);
 }
 
-/** 打开活动表里的单条记录；未配置 FEISHU_SHEET_URL 时给出明确提示。 */
-function openFeishuRecord(recordId) {
-  const a = activityEditState.list.find(x => x.record_id === recordId);
-  if (a && a.feishu_url) {
-    window.open(a.feishu_url, '_blank', 'noopener');
-  } else {
+/** 全页唯一的【在飞书打开】：用任意活动的深链去掉 record 参数，落到活动表本身。 */
+function openFeishuTable() {
+  const a = activityState.list.find(x => x.feishu_url);
+  if (!a) {
     toast('未配置飞书表格链接，请在后端配置 FEISHU_SHEET_URL');
+    return;
+  }
+  try {
+    const u = new URL(a.feishu_url);
+    u.searchParams.delete('record');
+    window.open(u.toString(), '_blank', 'noopener');
+  } catch (e) {
+    window.open(a.feishu_url, '_blank', 'noopener');
   }
 }
 
-/** 生成只读活动行。 */
+/** 生成只读活动行：每行只保留【点击编辑】入口，飞书入口全页仅一个。 */
 function buildReadOnlyActivityRow(a) {
   const row = document.createElement('div');
   row.className = 'act-item';
@@ -602,131 +547,45 @@ function buildReadOnlyActivityRow(a) {
   info.appendChild(title);
   info.appendChild(meta);
 
-  const actions = document.createElement('div');
-  actions.className = 'act-actions';
-  const editBtn = document.createElement('button');
-  editBtn.className = 'act-edit-btn';
-  editBtn.textContent = '编辑弹窗';
-  editBtn.addEventListener('click', () => openActivityEditModal(a.record_id));
-  const openBtn = document.createElement('button');
-  openBtn.className = 'act-open-btn';
-  openBtn.textContent = '在飞书打开';
-  openBtn.addEventListener('click', () => openFeishuRecord(a.record_id));
-  actions.appendChild(editBtn);
-  actions.appendChild(openBtn);
+  const btn = document.createElement('button');
+  btn.className = 'act-edit-btn';
+  btn.textContent = '点击编辑';
+  btn.addEventListener('click', () => openActivityEditModal(a.record_id));
 
   row.appendChild(info);
-  row.appendChild(actions);
+  row.appendChild(btn);
   return row;
 }
 
-/** 生成行内编辑活动行（不弹窗）。 */
-function buildInlineActivityRow(a) {
-  const row = document.createElement('div');
-  row.className = 'act-item editing';
-  row.setAttribute('data-record-id', a.record_id);
-  const s = activitySnapshot(a);
-  const id = a.record_id;
-  const statusOptions = ['已发布', '已结束']
-    .map(v => `<option value="${v}"${s.status === v ? ' selected' : ''}>${v}</option>`).join('');
-  const input = (field, label, value, span = false, type = 'text') => `
-    <div class="act-edit-field${span ? ' span-2' : ''}">
-      <label>${label}</label>
-      <input type="${type}" id="inline-${field}-${id}" value="${escapeAttr(value)}"
-             oninput="markActivityDirty()" onchange="markActivityDirty()">
-    </div>`;
-
-  row.innerHTML = `
-    <div class="act-edit-grid">
-      ${input('name', '活动名称', s.name, true)}
-      ${input('time', '开始时间', toDatetimeLocalValue(s.start_ts), false, 'datetime-local')}
-      <div class="act-edit-field">
-        <label>状态</label>
-        <select id="inline-status-${id}" onchange="markActivityDirty()">${statusOptions}</select>
-      </div>
-      ${input('place', '地点', s.place, true)}
-      ${input('signup', '报名方式', s.signup, true)}
-      <div class="act-edit-field span-2">
-        <label>参与须知</label>
-        <textarea id="inline-notice-${id}" rows="2" oninput="markActivityDirty()">${escapeAttr(s.notice)}</textarea>
-      </div>
-      ${input('link', '链接', s.link, true)}
-    </div>
-    <div class="act-edit-actions">
-      <button type="button" class="act-save-btn" data-save-id="${id}" onclick="saveInlineActivity('${id}')">保存</button>
-      <button type="button" class="act-cancel-btn" onclick="cancelInlineActivity('${id}')">取消</button>
-      <button type="button" class="act-edit-btn" onclick="openActivityEditModal('${id}')">编辑弹窗</button>
-      <button type="button" class="act-open-btn" onclick="openFeishuRecord('${id}')">在飞书打开</button>
-    </div>`;
-  return row;
-}
-
-/** 根据当前模式渲染活动管理列表。 */
+/** 渲染老师端活动列表（只读）。 */
 function renderTeacherActivityList() {
   const list = document.getElementById('teacherActivityList');
   if (!list) return;
-  const all = activityEditState.list;
+  const all = activityState.list;
   if (!all.length) {
     list.innerHTML = '<div style="color:#999;font-size:13px;">暂无活动</div>';
-    updateActivityDirtyStatus();
     return;
   }
   list.innerHTML = '';
-  all.forEach(a => list.appendChild(
-    activityEditState.enabled ? buildInlineActivityRow(a) : buildReadOnlyActivityRow(a)
-  ));
-  updateActivityDirtyStatus();
+  all.forEach(a => list.appendChild(buildReadOnlyActivityRow(a)));
 }
 
-/**
- * 拉取活动列表并渲染老师端管理页。
- * force=true（刷新按钮、进入板块）时如有未保存修改会先确认；保存后内部刷新用 false。
- */
-async function loadTeacherActivities(force = true) {
+/** 拉取活动列表并渲染老师端管理页；未保存的弹窗修改会先确认。 */
+async function loadTeacherActivities() {
   const list = document.getElementById('teacherActivityList');
   if (!list) return;
-  if (force && hasAnyUnsavedActivityChanges()) {
-    const ok = await askConfirm('活动列表中有未保存的修改，刷新会丢弃这些修改。确定继续吗？', '未保存的修改');
+  if (isActivityModalDirty()) {
+    const ok = await askConfirm('编辑弹窗中有未保存的修改，刷新会丢弃这些修改。确定继续吗？', '未保存的修改');
     if (!ok) return;
   }
   list.innerHTML = '<div style="color:#999;font-size:13px;">加载中…</div>';
   const all = await loadActivities(true); // 强制重新拉取，保证状态是最新的
   // 按开始时间倒序，开始时间较晚的活动排在前面。
   const sorted = all.slice().sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
-  activityEditState.list = sorted;
-  activityEditState.originals = {};
-  sorted.forEach(a => { activityEditState.originals[a.record_id] = activitySnapshot(a); });
-  activityEditState.modalRecordId = '';
-  activityEditState.modalOriginal = null;
+  activityState.list = sorted;
+  activityState.modalRecordId = '';
+  activityState.modalOriginal = null;
   renderTeacherActivityList();
-}
-
-/** 开启 / 关闭编辑模式；关闭时若有未保存修改则先确认。 */
-async function toggleActivityEditMode(enabled) {
-  const toggle = document.getElementById('activityEditToggle');
-  if (enabled) {
-    activityEditState.enabled = true;
-    renderTeacherActivityList();
-    return;
-  }
-  if (hasAnyUnsavedActivityChanges()) {
-    const ok = await askConfirm('有未保存的修改，关闭编辑模式会丢弃这些修改。确定关闭吗？', '未保存的修改');
-    if (!ok) {
-      if (toggle) toggle.checked = true;
-      return;
-    }
-  }
-  activityEditState.enabled = false;
-  renderTeacherActivityList();
-}
-
-/** 放弃某行的修改，恢复为原始快照。 */
-function cancelInlineActivity(recordId) {
-  const a = activityEditState.list.find(x => x.record_id === recordId);
-  const original = activityEditState.originals[recordId];
-  if (a && original) Object.assign(a, original);
-  renderTeacherActivityList();
-  toast('已取消修改');
 }
 
 /** 调用 update-activity 接口写回飞书。 */
@@ -743,25 +602,6 @@ async function updateActivityRecord(recordId, payload) {
   return data;
 }
 
-/** 保存某一行的行内修改。 */
-async function saveInlineActivity(recordId) {
-  const payload = collectInlineFields(recordId);
-  if (!validateActivityPayload(payload)) return;
-  const btn = document.querySelector(`[data-save-id="${recordId}"]`);
-  if (btn) { btn.disabled = true; btn.textContent = '保存中…'; }
-  try {
-    await updateActivityRecord(recordId, payload);
-    const a = activityEditState.list.find(x => x.record_id === recordId);
-    if (a) Object.assign(a, payload);
-    activityEditState.originals[recordId] = activitySnapshot(a || payload);
-    toast('活动已保存');
-    await loadTeacherActivities(false); // 重新拉取，同步日期显示与飞书深链
-  } catch (e) {
-    toast('保存失败：' + e.message);
-    if (btn) { btn.disabled = false; btn.textContent = '保存'; }
-  }
-}
-
 /** 填充编辑弹窗表单。 */
 function fillActivityEditModal(snapshot) {
   document.getElementById('modal-act-name').value = snapshot.name || '';
@@ -774,27 +614,39 @@ function fillActivityEditModal(snapshot) {
     ['已发布', '已结束'].includes(snapshot.status) ? snapshot.status : '已发布';
 }
 
-/** 打开独立编辑弹窗：用 get-one-activity 读取最新记录。 */
+/**
+ * 打开编辑弹窗：先填入当前表格中已展示的内容；
+ * 后台再尝试用 get-one-activity 拉取最新记录，失败时保留表格当前内容。
+ */
 async function openActivityEditModal(recordId) {
   const mask = document.getElementById('activityEditMask');
   if (isActivityModalDirty()) {
     const ok = await askConfirm('当前编辑弹窗有未保存修改，确定放弃并打开其他活动吗？', '未保存的修改');
     if (!ok) return;
   }
-  let data;
-  try {
-    const res = await fetch(BASE_URL + '/api/get-one-activity?record_id=' + encodeURIComponent(recordId));
-    data = await res.json();
-    if (!data.success) throw new Error(data.error || '读取活动失败');
-  } catch (e) {
-    toast('读取活动失败：' + e.message);
-    return;
-  }
-  const snapshot = activitySnapshot(data.data || {});
-  activityEditState.modalRecordId = recordId;
-  activityEditState.modalOriginal = snapshot;
+  const cached = activityState.list.find(x => x.record_id === recordId);
+  if (!cached) { toast('未找到该活动'); return; }
+
+  const snapshot = activitySnapshot(cached); // 保留当前表格里已编辑好的内容
+  activityState.modalRecordId = recordId;
+  activityState.modalOriginal = snapshot;
   fillActivityEditModal(snapshot);
   mask.style.display = 'flex';
+
+  try {
+    const res = await fetch(BASE_URL + '/api/get-one-activity?record_id=' + encodeURIComponent(recordId));
+    const data = await res.json();
+    if (data.success && data.data) {
+      const fresh = activitySnapshot(data.data);
+      // 用户尚未改动弹窗时才用最新数据覆盖，避免打断输入
+      if (!activityFieldsDiffer(snapshot, collectModalFields())) {
+        activityState.modalOriginal = fresh;
+        fillActivityEditModal(fresh);
+      }
+    }
+  } catch (e) {
+    // 读取失败不影响弹窗：继续使用表格中已有的内容
+  }
 }
 
 /** 关闭编辑弹窗；有未保存修改时先确认。 */
@@ -806,13 +658,13 @@ async function closeActivityEditModal() {
     if (!ok) return;
   }
   mask.style.display = 'none';
-  activityEditState.modalRecordId = '';
-  activityEditState.modalOriginal = null;
+  activityState.modalRecordId = '';
+  activityState.modalOriginal = null;
 }
 
 /** 保存编辑弹窗中的修改，复用 update-activity 接口。 */
 async function saveActivityEditModal() {
-  const recordId = activityEditState.modalRecordId;
+  const recordId = activityState.modalRecordId;
   if (!recordId) return;
   const payload = collectModalFields();
   if (!validateActivityPayload(payload)) return;
@@ -822,10 +674,10 @@ async function saveActivityEditModal() {
     await updateActivityRecord(recordId, payload);
     const mask = document.getElementById('activityEditMask');
     mask.style.display = 'none';
-    activityEditState.modalRecordId = '';
-    activityEditState.modalOriginal = null;
+    activityState.modalRecordId = '';
+    activityState.modalOriginal = null;
     toast('活动已保存');
-    await loadTeacherActivities(false);
+    await loadTeacherActivities();
   } catch (e) {
     toast('保存失败：' + e.message);
   } finally {
@@ -833,20 +685,12 @@ async function saveActivityEditModal() {
   }
 }
 
-/** 放弃所有未保存修改并回到只读状态；用于切换页面时。 */
-function resetActivityEditState() {
-  activityEditState.list.forEach(a => {
-    const original = activityEditState.originals[a.record_id];
-    if (original) Object.assign(a, original);
-  });
-  activityEditState.enabled = false;
-  activityEditState.modalRecordId = '';
-  activityEditState.modalOriginal = null;
-  const toggle = document.getElementById('activityEditToggle');
-  if (toggle) toggle.checked = false;
+/** 放弃未保存的弹窗修改；用于切换页面时。 */
+function resetActivityEditorState() {
+  activityState.modalRecordId = '';
+  activityState.modalOriginal = null;
   const mask = document.getElementById('activityEditMask');
   if (mask) mask.style.display = 'none';
-  renderTeacherActivityList();
 }
 
 // 渲染一组问题条目。resolved=true 表示是"近期已回复"，输入框预填原回复并可修改。
@@ -1178,7 +1022,7 @@ document.getElementById('activityEditMask')?.addEventListener('click', function 
 
 // 关闭 / 刷新页面时，若有未保存修改则请求浏览器再次确认
 window.addEventListener('beforeunload', function (e) {
-  if (hasUnsavedActivityChanges() || isActivityModalDirty()) {
+  if (hasAnyUnsavedActivityChanges()) {
     e.preventDefault();
     e.returnValue = '';
   }

@@ -971,7 +971,7 @@ header .tabs button:focus-visible {
 }
 
 /* ==================================================
-   老师端活动管理：只读列表 / 行内编辑 / 独立编辑弹窗
+   老师端活动管理：只读列表 / 独立编辑弹窗
    ================================================== */
 
 .manage-head {
@@ -988,99 +988,20 @@ header .tabs button:focus-visible {
   color: var(--muted);
 }
 
-/* 编辑模式开关：复用主题色，尺寸贴合老师端卡片 */
-.edit-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  margin: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fbfcfd;
-  cursor: pointer;
-  user-select: none;
-}
-
-.edit-switch input {
-  position: absolute;
-  opacity: 0;
-  width: 1px;
-  height: 1px;
-}
-
-.switch-track {
-  position: relative;
-  width: 38px;
-  height: 22px;
-  flex: none;
-  border-radius: 22px;
-  background: #cbd5e1;
-  transition: background .2s ease;
-}
-
-.switch-thumb {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
-  transition: transform .2s ease;
-}
-
-.edit-switch input:checked + .switch-track {
-  background: var(--primary);
-}
-
-.edit-switch input:checked + .switch-track .switch-thumb {
-  transform: translateX(16px);
-}
-
-.edit-switch input:focus-visible + .switch-track {
-  box-shadow: 0 0 0 3px rgba(24, 163, 140, .18);
-}
-
-.switch-label {
-  font-size: 13px;
-  color: var(--text);
-  font-weight: 600;
-}
-
-.edit-status {
-  display: none;
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(24, 163, 140, .08);
-  color: var(--primary-dark);
-  font-size: 12px;
-}
-
-.edit-status.show {
-  display: block;
-}
-
-.edit-status.dirty {
-  background: rgba(234, 179, 8, .12);
-  color: #8a5a00;
-}
-
-/* 只读行：保留原有活动信息与飞书入口，并新增独立编辑弹窗入口 */
-.act-actions {
+/* 全页唯一的飞书入口与刷新按钮并排 */
+.manage-actions {
   display: flex;
+  gap: 10px;
   align-items: center;
-  gap: 8px;
-  flex: none;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  margin-top: 14px;
 }
 
-.act-edit-btn,
-.act-save-btn,
-.act-cancel-btn {
+.manage-actions .primary {
+  margin-top: 0;
+}
+
+/* 只读行：每行只保留【点击编辑】入口 */
+.act-edit-btn {
   flex: none;
   padding: 8px 12px;
   border-radius: 8px;
@@ -1100,16 +1021,7 @@ header .tabs button:focus-visible {
   transform: translateY(-1px);
 }
 
-/* 编辑模式行：表单就地展开，不用弹窗 */
-.act-item.editing {
-  display: block;
-  padding: 14px 0 16px;
-}
-
-.act-item.editing .act-name {
-  white-space: normal;
-}
-
+/* 编辑弹窗内的表单网格 */
 .act-edit-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1146,37 +1058,6 @@ header .tabs button:focus-visible {
   box-shadow: 0 0 0 3px rgba(24, 163, 140, .12);
 }
 
-.act-edit-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 14px;
-}
-
-.act-save-btn {
-  border: 1px solid var(--primary);
-  background: var(--primary);
-  color: #ffffff;
-  font-weight: 600;
-}
-
-.act-save-btn:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-}
-
-.act-cancel-btn {
-  border: 1px solid var(--line);
-  background: #ffffff;
-  color: var(--muted);
-}
-
-.act-cancel-btn:hover {
-  border-color: #cbd5e1;
-  color: var(--text);
-}
-
-.act-save-btn:disabled,
 .act-open-btn:disabled,
 .act-edit-btn:disabled {
   opacity: .6;
@@ -1279,16 +1160,12 @@ header .tabs button:focus-visible {
 }
 
 @media (max-width: 600px) {
-  .manage-head {
-    align-items: stretch;
+  .manage-actions {
+    flex-wrap: wrap;
   }
 
-  .edit-switch {
-    justify-content: center;
-  }
-
-  .act-actions {
-    justify-content: flex-start;
+  .manage-actions > button {
+    flex: 1 1 120px;
   }
 
   .act-edit-grid {
