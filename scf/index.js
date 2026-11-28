@@ -14,6 +14,8 @@ const getActivities = require('./routes/getActivities');
 const activityRecord = require('./routes/activityRecord');
 const replyQuestion = require('./routes/replyQuestion');
 const chat = require('./routes/chat');
+const crawl = require('./routes/crawl');
+const parseArticle = require('./routes/parseArticle');
 
 const app = express();
 
@@ -30,6 +32,8 @@ app.use('/api', getActivities);
 app.use('/api', activityRecord);
 app.use('/api', replyQuestion);
 app.use('/api', chat);
+app.use('/api', crawl);          // POST /api/crawl/run 活动自动采集
+app.use('/api', parseArticle);   // POST /api/parse-article 公众号文章解析
 
 // 3. 静态文件托管（前端页面）
 // __dirname 是 scf 目录，'..' 代表上一级目录（即项目的根目录，你的 index.html 所在位置）

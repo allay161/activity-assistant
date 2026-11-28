@@ -120,7 +120,7 @@ document.getElementById('passcode-mask').addEventListener('click', function (e) 
 let currentMainTab = 'chat';
 
 /**
- * 切换 chat、timeline 或 review 页面；refetch=false 时只切换界面，不重新请求活动。
+ * 切换 chat、timeline、schedule 或 review 页面；refetch=false 时只切换界面，不重新请求活动。
  */
 function switchMainTab(name, refetch = true) {
   currentMainTab = name;
@@ -135,8 +135,11 @@ function switchMainTab(name, refetch = true) {
   if (refetch) {
     loadActivities().then(() => {
       if (name === 'timeline') renderTimeline();
+      if (name === 'schedule') renderSchedule();
       if (name === 'review') renderReview();
     });
+  } else if (name === 'schedule') {
+    renderSchedule(); // 数据已在缓存，直接渲染
   }
 }
 
@@ -171,6 +174,7 @@ async function switchTeacherTab(name) {
   if (btn) btn.classList.add('active');
   // 进入板块时刷新对应数据
   if (name === 'manage') loadTeacherActivities();
+  if (name === 'collect') loadCollectList();
   if (name === 'question') loadQuestions();
 }
 
@@ -361,6 +365,7 @@ async function submitActivity() {
   const timeRaw = document.getElementById('act-time').value; // YYYY-MM-DDTHH:mm，不含时区
   const payload = {
     name: document.getElementById('act-name').value,
+    category: document.getElementById('act-category')?.value || '',
     time: timeRaw,
     // 毫秒时间戳：请后端优先使用 time_ts
     time_ts: timeRaw ? new Date(timeRaw).getTime() : '',
@@ -437,6 +442,7 @@ function datetimeLocalToTs(value) {
 function activitySnapshot(a) {
   return {
     name: a.name || '',
+    category: a.category || '',
     start_ts: Number(a.start_ts) || 0,
     place: a.place || '',
     signup: a.signup || '',
@@ -448,7 +454,7 @@ function activitySnapshot(a) {
 
 /** 比较两个活动字段对象是否不同。 */
 function activityFieldsDiffer(a, b) {
-  return ['name', 'start_ts', 'place', 'signup', 'notice', 'link', 'status']
+  return ['name', 'category', 'start_ts', 'place', 'signup', 'notice', 'link', 'status']
     .some(k => String(a[k] || '') !== String(b[k] || ''));
 }
 
@@ -457,6 +463,7 @@ function collectModalFields() {
   const get = id => document.getElementById(id);
   return {
     name: (get('modal-act-name')?.value || '').trim(),
+    category: get('modal-act-category')?.value || '',
     start_ts: datetimeLocalToTs(get('modal-act-time')?.value || ''),
     place: (get('modal-act-place')?.value || '').trim(),
     signup: (get('modal-act-signup')?.value || '').trim(),
@@ -538,7 +545,7 @@ function buildReadOnlyActivityRow(a) {
   info.className = 'act-info';
   const title = document.createElement('div');
   title.className = 'act-name';
-  const cat = guessCategory(a.name);
+  const cat = activityCategory(a);
   title.textContent = cat.icon + ' ' + (a.name || '（未命名活动）');
   const meta = document.createElement('div');
   meta.className = 'act-meta';
@@ -605,6 +612,8 @@ async function updateActivityRecord(recordId, payload) {
 /** 填充编辑弹窗表单。 */
 function fillActivityEditModal(snapshot) {
   document.getElementById('modal-act-name').value = snapshot.name || '';
+  document.getElementById('modal-act-category').value =
+    CATEGORIES.some(c => c.key === snapshot.category) ? snapshot.category : '其他';
   document.getElementById('modal-act-time').value = toDatetimeLocalValue(snapshot.start_ts);
   document.getElementById('modal-act-place').value = snapshot.place || '';
   document.getElementById('modal-act-signup').value = snapshot.signup || '';
@@ -798,6 +807,227 @@ async function submitReply(recordId, btn) {
 }
 
 // ============================================================
+// ============ 老师端：采集审核 + 公众号文章解析 ============
+// ============================================================
+// 官网自动采集的活动以 状态=待审核 写入活动表，在这里核对/补齐后发布；
+// 发布前学生端不可见（时间表/往期回顾只读"已发布/已结束"）。
+
+/** 拉取并渲染"采集审核"候选列表（状态=待审核）。 */
+async function loadCollectList() {
+  const box = document.getElementById('collectList');
+  if (!box) return;
+  box.innerHTML = '<div style="color:#999;font-size:13px;">加载中…</div>';
+  const all = await loadActivities(true);
+  const candidates = all
+    .filter(a => a.status === '待审核')
+    .sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
+  if (!candidates.length) {
+    box.innerHTML = '<div style="color:#999;font-size:13px;">暂无待审核的采集候选。点上方「立即抓取一次」试试，或等待定时任务运行。</div>';
+    return;
+  }
+  box.innerHTML = '';
+  candidates.forEach(a => box.appendChild(buildCollectCard(a)));
+}
+
+/** 生成一张候选审核卡片：可编辑字段 + 通过发布 / 忽略按钮。 */
+function buildCollectCard(a) {
+  const card = document.createElement('div');
+  card.className = 'collect-card';
+  card.dataset.recordId = a.record_id;
+
+  const head = document.createElement('div');
+  head.className = 'collect-head';
+  const title = document.createElement('div');
+  title.className = 'collect-title';
+  const cat = activityCategory(a);
+  title.textContent = cat.icon + ' ' + (a.name || '（未命名活动）');
+  const badge = document.createElement('span');
+  badge.className = 'collect-badge';
+  badge.textContent = '待审核';
+  head.appendChild(title); head.appendChild(badge);
+  card.appendChild(head);
+
+  // 来源行：来源名称 + 原文链接
+  const srcLine = document.createElement('div');
+  srcLine.className = 'collect-source';
+  const srcParts = ['来源：' + (a.source || '网络采集')];
+  if (a.crawl_time) srcParts.push('抓取于 ' + a.crawl_time);
+  srcLine.textContent = srcParts.join(' · ');
+  if (a.link) {
+    const link = document.createElement('a');
+    link.href = a.link; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.textContent = ' ｜ 查看原文 ↗';
+    srcLine.appendChild(link);
+  }
+  card.appendChild(srcLine);
+
+  // 可编辑字段网格：名称 / 分类 / 时间 / 地点 / 报名 / 须知
+  const grid = document.createElement('div');
+  grid.className = 'collect-grid';
+
+  const field = (labelText, id, value, span2) => {
+    const wrap = document.createElement('div');
+    if (span2) wrap.className = 'span-2';
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    const input = document.createElement('input');
+    input.id = id;
+    input.value = value || '';
+    wrap.appendChild(label); wrap.appendChild(input);
+    return wrap;
+  };
+
+  grid.appendChild(field('活动名称', 'collect-name-' + a.record_id, a.name, true));
+
+  // 分类下拉
+  const catWrap = document.createElement('div');
+  const catLabel = document.createElement('label');
+  catLabel.textContent = '分类';
+  const catSel = document.createElement('select');
+  catSel.id = 'collect-cat-' + a.record_id;
+  CATEGORIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.key;
+    opt.textContent = c.icon + ' ' + c.key;
+    if (c.key === cat.key) opt.selected = true;
+    catSel.appendChild(opt);
+  });
+  catWrap.appendChild(catLabel); catWrap.appendChild(catSel);
+  grid.appendChild(catWrap);
+
+  // 开始时间（datetime-local）
+  const timeWrap = document.createElement('div');
+  const timeLabel = document.createElement('label');
+  timeLabel.textContent = '开始时间';
+  const timeInput = document.createElement('input');
+  timeInput.type = 'datetime-local';
+  timeInput.id = 'collect-time-' + a.record_id;
+  timeInput.value = toDatetimeLocalValue(a.start_ts);
+  timeWrap.appendChild(timeLabel); timeWrap.appendChild(timeInput);
+  grid.appendChild(timeWrap);
+
+  grid.appendChild(field('地点', 'collect-place-' + a.record_id, a.place));
+  grid.appendChild(field('报名方式', 'collect-signup-' + a.record_id, a.signup));
+  grid.appendChild(field('参与须知', 'collect-notice-' + a.record_id, a.notice, true));
+
+  card.appendChild(grid);
+
+  const btns = document.createElement('div');
+  btns.className = 'collect-btns';
+  const approveBtn = document.createElement('button');
+  approveBtn.type = 'button';
+  approveBtn.className = 'approve';
+  approveBtn.textContent = '✓ 通过发布';
+  approveBtn.addEventListener('click', () => reviewCollected(a.record_id, 'publish', approveBtn));
+  const ignoreBtn = document.createElement('button');
+  ignoreBtn.type = 'button';
+  ignoreBtn.className = 'ignore';
+  ignoreBtn.textContent = '忽略';
+  ignoreBtn.addEventListener('click', () => reviewCollected(a.record_id, 'ignore', ignoreBtn));
+  btns.appendChild(approveBtn); btns.appendChild(ignoreBtn);
+  card.appendChild(btns);
+
+  return card;
+}
+
+/** 读取候选卡片上的表单值。 */
+function collectCardFields(recordId) {
+  const get = id => document.getElementById(id);
+  const timeValue = get('collect-time-' + recordId)?.value || '';
+  return {
+    name: (get('collect-name-' + recordId)?.value || '').trim(),
+    category: get('collect-cat-' + recordId)?.value || '',
+    start_ts: datetimeLocalToTs(timeValue),
+    place: (get('collect-place-' + recordId)?.value || '').trim(),
+    signup: (get('collect-signup-' + recordId)?.value || '').trim(),
+    notice: (get('collect-notice-' + recordId)?.value || '').trim()
+  };
+}
+
+/**
+ * 审核操作：action='publish' 时把卡片字段连同状态=已发布写回飞书；
+ * action='ignore' 时仅把状态改为已忽略（学生端与时间表均不再显示）。
+ */
+async function reviewCollected(recordId, action, btn) {
+  const payload = action === 'publish'
+    ? { ...collectCardFields(recordId), status: '已发布' }
+    : { status: '已忽略' };
+  if (action === 'publish' && !payload.name) {
+    toast('活动名称不能为空');
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = '处理中…'; }
+  try {
+    await updateActivityRecord(recordId, payload);
+    toast(action === 'publish' ? '已发布，学生端即可看到' : '已忽略该候选');
+    loadCollectList();
+  } catch (e) {
+    toast('操作失败：' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = action === 'publish' ? '✓ 通过发布' : '忽略'; }
+  }
+}
+
+/** 手动触发一次采集（POST /api/crawl/run）。 */
+async function runCrawlNow(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '抓取中…'; }
+  try {
+    const res = await fetch(BASE_URL + '/api/crawl/run', {
+      method: 'POST',
+      headers: teacherHeaders()
+    });
+    const data = await res.json();
+    if (data.success) {
+      const d = data.data || {};
+      toast(`抓取完成：新增 ${d.addedCount} 条，跳过重复 ${d.skippedCount} 条`);
+      loadCollectList();
+    } else {
+      toast('抓取失败：' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    toast('抓取失败：' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⚡ 立即抓取一次'; }
+  }
+}
+
+/** 解析公众号文章链接，把标题/内容摘要填进录入表单。 */
+async function parseWechatArticle() {
+  const input = document.getElementById('wx-article-url');
+  const url = (input?.value || '').trim();
+  if (!url) { toast('请先粘贴公众号文章链接'); return; }
+  const btn = document.querySelector('.wx-parse-row .act-open-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '解析中…'; }
+  try {
+    const res = await fetch(BASE_URL + '/api/parse-article', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (data.success && data.data) {
+      const d = data.data;
+      const nameEl = document.getElementById('act-name');
+      const noticeEl = document.getElementById('act-notice');
+      const linkEl = document.getElementById('act-link');
+      if (nameEl && !nameEl.value.trim()) nameEl.value = d.title;
+      if (noticeEl && !noticeEl.value.trim()) {
+        noticeEl.value = [d.account ? '来源公众号：' + d.account : '',
+                          d.publish_time ? '发布于：' + d.publish_time : '',
+                          d.content_preview].filter(Boolean).join('\n');
+      }
+      if (linkEl) linkEl.value = d.url;
+      toast('已填入「' + d.title.slice(0, 15) + '…」，请补齐时间与地点后提交');
+    } else {
+      toast('解析失败：' + (data.error || '未知错误'));
+    }
+  } catch (e) {
+    toast('解析失败：' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '解析填入'; }
+  }
+}
+
+// ============================================================
 // ============ 活动数据：拉取 / 时间轴 / 往期回顾 ============
 // ============================================================
 
@@ -822,7 +1052,39 @@ async function loadActivities(force = true) {
   }
 }
 
-// 根据活动名称推断分类图标（讲座🎓、文体🏀、读书📖、志愿🤝）
+// ============ 分类体系（结构化分类：志愿服务 / 竞赛活动 / 讲座 / 文体 / 读书） ============
+// 与飞书活动表「分类」单选字段保持一致；抓取打标和筛选 chips 都用这一套。
+const CATEGORIES = [
+  { key: '志愿服务', icon: '🤝' },
+  { key: '竞赛活动', icon: '🏆' },
+  { key: '讲座',     icon: '🎓' },
+  { key: '文体',     icon: '🏀' },
+  { key: '读书',     icon: '📖' },
+  { key: '其他',     icon: '📌' }
+];
+
+/** 在 CATEGORIES 中查找分类对象；找不到时回退到"其他"。 */
+function findCategory(key) {
+  const k = String(key || '').trim();
+  const hit = CATEGORIES.find(c => c.key === k);
+  return hit || CATEGORIES[CATEGORIES.length - 1];
+}
+
+/** 渲染两个分类下拉（录入表单 / 编辑弹窗），保持单一数据来源。 */
+function renderCategorySelects() {
+  ['act-category', 'modal-act-category'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel || sel.options.length) return;
+    CATEGORIES.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.key;
+      opt.textContent = c.icon + ' ' + c.key;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+// 根据活动名称推断分类（分类字段为空的旧数据 / 抓取打标的兜底）
 /**
  * 依次匹配名称关键词，采用第一个命中的分类；否则返回通用活动图标。
  */
@@ -830,17 +1092,33 @@ function guessCategory(name) {
   const n = name || '';
   if (/讲座|论坛|学术|报告|沙龙|研讨|课/.test(n)) return { icon: '🎓', label: '讲座' };
   if (/读书|阅读|书会|书评/.test(n)) return { icon: '📖', label: '读书' };
-  if (/志愿|公益|服务|义工|献爱心|环保/.test(n)) return { icon: '🤝', label: '志愿' };
-  if (/体育|运动|球|比赛|篮球|足球|跑步|文体|晚会|文艺|歌唱|舞蹈/.test(n)) return { icon: '🏀', label: '文体' };
-  return { icon: '📌', label: '活动' };
+  if (/志愿|公益|服务|义工|献爱心|环保/.test(n)) return { icon: '🤝', label: '志愿服务' };
+  if (/竞赛|大赛|挑战杯|创新创业|比赛/.test(n)) return { icon: '🏆', label: '竞赛活动' };
+  if (/体育|运动|球|篮球|足球|跑步|文体|晚会|文艺|歌唱|舞蹈/.test(n)) return { icon: '🏀', label: '文体' };
+  return { icon: '📌', label: '其他' };
+}
+
+/**
+ * 取活动的结构化分类：优先用飞书「分类」字段；为空时回退到名称关键词推断。
+ * 返回 { key, icon }。
+ */
+function activityCategory(a) {
+  const field = String((a && a.category) || '').trim();
+  if (field) {
+    const hit = CATEGORIES.find(c => c.key === field || field.includes(c.key));
+    if (hit) return { key: hit.key, icon: hit.icon };
+  }
+  const guessed = guessCategory(a && a.name);
+  return { key: guessed.label, icon: guessed.icon };
 }
 
 // 生成活动卡片 DOM（时间轴页与往期页复用）
 /**
  * 生成并返回卡片元素；past=true 用于往期回顾，其余卡片支持展开详情。
+ * 非往期卡片右上角带「＋日程 / 已加日程」收藏按钮（与展开点击互不干扰）。
  */
 function buildActivityCard(a, { past = false } = {}) {
-  const cat = guessCategory(a.name);
+  const cat = activityCategory(a);
   const card = document.createElement('div');
   card.className = past ? 'review-card' : 'activity-card';
   if (past) {
@@ -862,9 +1140,25 @@ function buildActivityCard(a, { past = false } = {}) {
   const name = document.createElement('div');
   name.className = 'ac-name'; name.textContent = a.name || '（未命名活动）';
   const catLabel = document.createElement('div');
-  catLabel.className = 'ac-cat'; catLabel.textContent = cat.label;
+  catLabel.className = 'ac-cat'; catLabel.textContent = cat.key;
   title.appendChild(name); title.appendChild(catLabel);
   head.appendChild(icon); head.appendChild(title);
+  if (!past) {
+    // 收藏按钮：事件上 stopPropagation，避免触发卡片展开
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'sch-add-btn' + (isInSchedule(a.record_id) ? ' added' : '');
+    addBtn.textContent = isInSchedule(a.record_id) ? '✓ 已加' : '＋日程';
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const added = toggleSchedule(a.record_id);
+      addBtn.classList.toggle('added', added);
+      addBtn.textContent = added ? '✓ 已加' : '＋日程';
+      toast(added ? '已加入我的日程' : '已从我的日程移除');
+      if (currentMainTab === 'schedule') renderSchedule(); // 日程页开着时同步刷新
+    });
+    head.appendChild(addBtn);
+  }
   card.appendChild(head);
 
   const meta = document.createElement('div');
@@ -917,22 +1211,50 @@ function buildEmptyState(emoji, title, desc) {
   return box;
 }
 
+// ---------- 分类筛选（时间表页顶部 chips） ----------
+let currentTimelineFilter = '全部';
+
+/** 渲染时间表顶部的分类筛选 chips（全部 + 六个结构化分类）。 */
+function renderCategoryFilter() {
+  const box = document.getElementById('timelineFilter');
+  if (!box || box.childElementCount) return; // 只渲染一次
+  ['全部'].concat(CATEGORIES.map(c => c.key)).forEach(key => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'fchip' + (key === currentTimelineFilter ? ' active' : '');
+    btn.textContent = key;
+    btn.addEventListener('click', () => {
+      currentTimelineFilter = key;
+      box.querySelectorAll('.fchip').forEach(b => b.classList.toggle('active', b.textContent === key));
+      renderTimeline();
+    });
+    box.appendChild(btn);
+  });
+}
+
 // ---------- 时间轴渲染（核心） ----------
-// 步骤：仅保留“已发布” → 按开始时间升序 → 按日期分组 → 渲染节点和卡片。
+// 步骤：仅保留“已发布” → 应用分类筛选 → 按开始时间升序 → 按日期分组 → 渲染节点和卡片。
 /**
- * 从缓存筛选已发布活动，按开始时间升序及日期分组后渲染时间轴。
+ * 从缓存筛选已发布活动，应用分类筛选后按开始时间升序及日期分组渲染时间轴。
  */
 function renderTimeline() {
   const box = document.getElementById('timelineList');
   if (!box) return;
   box.innerHTML = '<div class="loading-state">正在加载活动…</div>';
+  renderCategoryFilter();
 
   const all = activitiesCache || [];
   // 1) 只保留"已发布"（过滤掉已结束及未知状态）
-  const upcoming = all.filter(a => a.status === '已发布');
+  let upcoming = all.filter(a => a.status === '已发布');
+  // 1.5) 分类筛选：选了具体分类时，按结构化分类匹配（含关键词推断兜底）
+  if (currentTimelineFilter !== '全部') {
+    upcoming = upcoming.filter(a => activityCategory(a).key === currentTimelineFilter);
+  }
   if (!upcoming.length) {
     box.innerHTML = '';
-    box.appendChild(buildEmptyState('📭', '暂无进行中的活动', '新的活动发布后会自动出现在这里'));
+    box.appendChild(buildEmptyState('📭',
+      currentTimelineFilter === '全部' ? '暂无进行中的活动' : `暂无「${currentTimelineFilter}」类活动`,
+      '新的活动发布后会自动出现在这里'));
     return;
   }
 
@@ -1007,6 +1329,217 @@ function renderReview() {
   past.forEach(a => box.appendChild(buildActivityCard(a, { past: true })));
 }
 
+// ============================================================
+// ============ 我的日程：收藏 / 冲突检测 / ics 导出 ============
+// ============================================================
+// 收藏关系存在浏览器本地（localStorage），免登录、零后端；
+// 重新进入页面时按 record_id 与最新活动表数据对齐，已下架的活动自动过滤。
+
+const SCHEDULE_KEY = 'myScheduleIds';
+// 无结束时间时的默认活动时长（分钟），用于冲突检测和 ics DTEND
+const DEFAULT_DURATION_MIN = 120;
+
+/** 读取本地收藏的活动 record_id 数组。 */
+function getScheduleIds() {
+  try {
+    const arr = JSON.parse(localStorage.getItem(SCHEDULE_KEY) || '[]');
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+
+/** 写回本地收藏数组。 */
+function setScheduleIds(ids) {
+  localStorage.setItem(SCHEDULE_KEY, JSON.stringify(ids));
+}
+
+/** 当前活动是否已加入我的日程。 */
+function isInSchedule(recordId) {
+  return !!recordId && getScheduleIds().indexOf(recordId) !== -1;
+}
+
+/** 加入/移出我的日程，返回加入后的状态（true=已加入）。 */
+function toggleSchedule(recordId) {
+  if (!recordId) return false;
+  const ids = getScheduleIds();
+  const idx = ids.indexOf(recordId);
+  if (idx === -1) { ids.push(recordId); setScheduleIds(ids); return true; }
+  ids.splice(idx, 1); setScheduleIds(ids); return false;
+}
+
+/** 我的日程对应的活动列表（按 record_id 对齐活动表，已发布优先、隐藏已失效项）。 */
+function getScheduleActivities() {
+  const ids = getScheduleIds();
+  const map = new Map((activitiesCache || []).map(a => [a.record_id, a]));
+  return ids
+    .map(id => map.get(id))
+    .filter(Boolean)
+    .sort((x, y) => (x.start_ts || Number.MAX_SAFE_INTEGER) - (y.start_ts || Number.MAX_SAFE_INTEGER));
+}
+
+/** 毫秒时间戳 -> 北京时间展示（同时间表页格式）。 */
+function scheduleWhenDisplay(a) {
+  const when = [a.date_display, a.time_display].filter(Boolean).join(' ');
+  return when || '时间待定';
+}
+
+/** 渲染"我的日程"页：按日期分组的收藏活动 + 时间冲突提示。 */
+function renderSchedule() {
+  const box = document.getElementById('scheduleList');
+  if (!box) return;
+  const countEl = document.getElementById('scheduleCount');
+  const items = getScheduleActivities();
+
+  if (countEl) {
+    countEl.textContent = items.length ? `已收藏 ${items.length} 个活动` : '';
+  }
+
+  if (!items.length) {
+    box.innerHTML = '';
+    box.appendChild(buildEmptyState('🗓️', '日程还是空的',
+      '去「活动时间表」点卡片上的「＋日程」收藏感兴趣的活动吧'));
+    return;
+  }
+
+  // 时间冲突检测：默认时长 120 分钟，两场活动区间重叠即提示
+  const conflictIds = new Set();
+  const withTime = items.filter(a => a.start_ts);
+  for (let i = 1; i < withTime.length; i++) {
+    const prevEnd = withTime[i - 1].start_ts + DEFAULT_DURATION_MIN * 60000;
+    if (withTime[i].start_ts < prevEnd) {
+      conflictIds.add(withTime[i - 1].record_id);
+      conflictIds.add(withTime[i].record_id);
+    }
+  }
+
+  box.innerHTML = '';
+  items.forEach(a => {
+    const cat = activityCategory(a);
+    const card = document.createElement('div');
+    card.className = 'sch-card' + (conflictIds.has(a.record_id) ? ' conflict' : '');
+
+    const head = document.createElement('div');
+    head.className = 'ac-head';
+    const icon = document.createElement('div');
+    icon.className = 'ac-icon'; icon.textContent = cat.icon;
+    const title = document.createElement('div');
+    title.className = 'ac-title';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'ac-name'; nameEl.textContent = a.name || '（未命名活动）';
+    const catLabel = document.createElement('div');
+    catLabel.className = 'ac-cat'; catLabel.textContent = cat.key;
+    title.appendChild(nameEl); title.appendChild(catLabel);
+    head.appendChild(icon); head.appendChild(title);
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'sch-add-btn added';
+    removeBtn.textContent = '移除';
+    removeBtn.addEventListener('click', () => {
+      toggleSchedule(a.record_id);
+      renderSchedule();
+      toast('已从我的日程移除');
+    });
+    head.appendChild(removeBtn);
+    card.appendChild(head);
+
+    const meta = document.createElement('div');
+    meta.className = 'ac-meta';
+    const parts = ['🕐 ' + scheduleWhenDisplay(a)];
+    if (a.place) parts.push('📍 ' + a.place);
+    parts.forEach(t => {
+      const s = document.createElement('span'); s.textContent = t; meta.appendChild(s);
+    });
+    card.appendChild(meta);
+
+    if (conflictIds.has(a.record_id) && a.start_ts) {
+      const warn = document.createElement('div');
+      warn.className = 'conflict-warn';
+      warn.textContent = '⚠️ 与其他已收藏活动时间冲突';
+      card.appendChild(warn);
+    }
+
+    if (a.link) {
+      const link = document.createElement('a');
+      link.className = 'sch-link';
+      link.href = a.link; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.textContent = '🔗 查看活动链接';
+      card.appendChild(link);
+    }
+
+    box.appendChild(card);
+  });
+}
+
+// ---------- 标准 ics 日历导出 ----------
+/** 毫秒时间戳 -> ics UTC 格式（YYYYMMDDTHHMMSSZ，UTC 与北京时间相差 8 小时）。 */
+function icsUtc(ts) {
+  const d = new Date(Number(ts) - 8 * 3600 * 1000);
+  return d.getUTCFullYear()
+    + String(d.getUTCMonth() + 1).padStart(2, '0')
+    + String(d.getUTCDate()).padStart(2, '0')
+    + 'T' + String(d.getUTCHours()).padStart(2, '0')
+    + String(d.getUTCMinutes()).padStart(2, '0')
+    + '00Z';
+}
+
+/** ics TEXT 值转义：反斜杠、分号、逗号、换行。 */
+function icsEscape(v) {
+  return String(v || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r?\n/g, '\\n');
+}
+
+/** 用收藏活动生成标准 VCALENDAR 并触发下载（Apple / Google / Outlook 日历均可导入）。 */
+function exportMySchedule() {
+  const items = getScheduleActivities().filter(a => a.start_ts);
+  if (!items.length) {
+    toast('日程里还没有带时间的活动，先去收藏几个吧');
+    return;
+  }
+  const now = icsUtc(Date.now());
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Campus Activity Assistant//CN',
+    'CALSCALE:GREGORIAN',
+    'X-WR-CALNAME:学院活动日程'
+  ];
+  items.forEach(a => {
+    const start = Number(a.start_ts);
+    const end = start + DEFAULT_DURATION_MIN * 60000;
+    const descParts = [];
+    if (a.signup) descParts.push('报名方式：' + a.signup);
+    if (a.notice) descParts.push('参与须知：' + a.notice);
+    if (a.link) descParts.push('链接：' + a.link);
+    lines.push(
+      'BEGIN:VEVENT',
+      'UID:' + a.record_id + '@activity-assistant',
+      'DTSTAMP:' + now,
+      'DTSTART:' + icsUtc(start),
+      'DTEND:' + icsUtc(end),
+      'SUMMARY:' + icsEscape(a.name || '活动'),
+      'LOCATION:' + icsEscape(a.place || ''),
+      'DESCRIPTION:' + icsEscape(descParts.join('\n')),
+      'END:VEVENT'
+    );
+  });
+  lines.push('END:VCALENDAR');
+
+  // ics 规范要求 CRLF 换行
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '我的日程.ics';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast('已导出 ' + items.length + ' 个活动，可在手机/电脑日历中导入');
+}
+
 // ============ 初始化 ============
 // 确认弹窗按钮与遮罩：统一由 askConfirm() 驱动
 document.getElementById('confirmCancel')?.addEventListener('click', () => resolveConfirm(false));
@@ -1030,7 +1563,9 @@ window.addEventListener('beforeunload', function (e) {
 
 // 首屏预拉一次活动，保证数据就绪；切换 Tab 时再强制刷新
 loadActivities().then(() => {
+  renderCategorySelects(); // 录入表单与编辑弹窗的分类下拉
   renderTimeline();
+  renderSchedule();
   renderReview();
 });
 
