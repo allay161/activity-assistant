@@ -9,3 +9,6 @@ scf/node_modules/
 .dev.vars
 .env
 .env.local
+
+# 项目交付手册（本地保留最新版，不上传到 GitHub）
+项目交付手册.md
