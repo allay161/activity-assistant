@@ -1323,19 +1323,6 @@ header .tabs button:focus-visible {
   text-decoration: underline;
 }
 
-/* 时间冲突提示 */
-.sch-card.conflict {
-  border-color: #f0b429;
-  background: #fffbeb;
-}
-
-.conflict-warn {
-  margin-top: 8px;
-  font-size: 12.5px;
-  color: #b45309;
-  font-weight: 700;
-}
-
 /* 录入方式切换：直接录入 / 从公众号文章快速填入 */
 .entry-mode-switch {
   display: inline-flex;

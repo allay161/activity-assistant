@@ -1470,13 +1470,13 @@ function renderReview() {
 }
 
 // ============================================================
-// ============ 我的日程：收藏 / 冲突检测 / ics 导出 ============
+// ============ 我的日程：收藏 / ics 导出 ============
 // ============================================================
 // 收藏关系存在浏览器本地（localStorage），免登录、零后端；
 // 重新进入页面时按 record_id 与最新活动表数据对齐，已下架的活动自动过滤。
 
 const SCHEDULE_KEY = 'myScheduleIds';
-// 无结束时间时的默认活动时长（分钟），用于冲突检测和 ics DTEND
+// 无结束时间时的默认活动时长（分钟），仅用于 ics DTEND
 const DEFAULT_DURATION_MIN = 120;
 
 /** 读取本地收藏的活动 record_id 数组。 */
@@ -1512,7 +1512,7 @@ function getScheduleActivities() {
   const map = new Map((activitiesCache || []).map(a => [a.record_id, a]));
   return ids
     .map(id => map.get(id))
-    // 老师改成待审核/已忽略/已结束的活动不再展示，也不进入冲突检测和 ics 导出
+    // 老师改成待审核/已忽略/已结束的活动不再展示，也不进入 ics 导出
     .filter(a => a && a.status === '已发布')
     .sort((x, y) => (x.start_ts || Number.MAX_SAFE_INTEGER) - (y.start_ts || Number.MAX_SAFE_INTEGER));
 }
@@ -1523,7 +1523,7 @@ function scheduleWhenDisplay(a) {
   return when || '时间待定';
 }
 
-/** 渲染"我的日程"页：按日期分组的收藏活动 + 时间冲突提示。 */
+/** 渲染"我的日程"页：收藏活动按开始时间升序展示，无冲突检测。 */
 function renderSchedule() {
   const box = document.getElementById('scheduleList');
   if (!box) return;
@@ -1541,22 +1541,11 @@ function renderSchedule() {
     return;
   }
 
-  // 时间冲突检测：默认时长 120 分钟，两场活动区间重叠即提示
-  const conflictIds = new Set();
-  const withTime = items.filter(a => a.start_ts);
-  for (let i = 1; i < withTime.length; i++) {
-    const prevEnd = withTime[i - 1].start_ts + DEFAULT_DURATION_MIN * 60000;
-    if (withTime[i].start_ts < prevEnd) {
-      conflictIds.add(withTime[i - 1].record_id);
-      conflictIds.add(withTime[i].record_id);
-    }
-  }
-
   box.innerHTML = '';
   items.forEach(a => {
     const cat = activityCategory(a);
     const card = document.createElement('div');
-    card.className = 'sch-card' + (conflictIds.has(a.record_id) ? ' conflict' : '');
+    card.className = 'sch-card';
 
     const head = document.createElement('div');
     head.className = 'ac-head';
@@ -1591,13 +1580,6 @@ function renderSchedule() {
       const s = document.createElement('span'); s.textContent = t; meta.appendChild(s);
     });
     card.appendChild(meta);
-
-    if (conflictIds.has(a.record_id) && a.start_ts) {
-      const warn = document.createElement('div');
-      warn.className = 'conflict-warn';
-      warn.textContent = '⚠️ 与其他已收藏活动时间冲突';
-      card.appendChild(warn);
-    }
 
     if (a.link) {
       const link = document.createElement('a');
