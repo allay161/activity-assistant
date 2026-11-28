@@ -4,7 +4,7 @@ const { getTenantToken } = require('../feishu');
 
 router.post('/add-activity', async (req, res) => {
   try {
-    const { name, time, time_ts, place, signup, notice, link } = req.body;
+    const { name, time, time_ts, place, signup, notice, link, category } = req.body;
     if (!name || (!time && !time_ts)) {
       return res.status(400).json({ success: false, error: '活动名称和时间必填' });
     }
@@ -35,7 +35,8 @@ router.post('/add-activity', async (req, res) => {
           "报名方式": signup || "",
           "参与须知": notice || "",
           "链接": link || "",
-          "状态": "已发布"
+          "状态": "已发布",
+          ...(String(category || '').trim() ? { "分类": String(category).trim() } : {})
         }
       })
     });

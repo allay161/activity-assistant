@@ -50,8 +50,11 @@ router.get('/get-activities', async (req, res) => {
         signup: flat(f["报名方式"]),
         notice: flat(f["参与须知"]),
         link: flat(f["链接"]),
-        status: flat(f["状态"]),   // "已发布" / "已结束"
-        category: flat(f["分类"])  // 可选列；为空时前端按名称关键词推断图标
+        status: flat(f["状态"]),   // "已发布" / "已结束" / "待审核"（采集候选） / "已忽略"
+        category: flat(f["分类"]), // 可选列；为空时前端按名称关键词推断图标
+        source: flat(f["来源"]),         // 采集来源（手动录入为空）
+        source_url: flat(f["来源链接"]), // 采集原文链接
+        crawl_time: flat(f["抓取时间"])  // 抓取时间，用于审核留档
       };
     });
 

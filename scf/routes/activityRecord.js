@@ -88,6 +88,10 @@ router.post('/update-activity', async (req, res) => {
 
     const fields = {};
     if (req.body.name !== undefined) fields['活动名称'] = String(req.body.name).trim();
+    if (req.body.category !== undefined) {
+      const category = String(req.body.category || '').trim();
+      if (category) fields['分类'] = category;
+    }
     if (req.body.place !== undefined) fields['地点'] = String(req.body.place || '').trim();
     if (req.body.signup !== undefined) fields['报名方式'] = String(req.body.signup || '').trim();
     if (req.body.notice !== undefined) fields['参与须知'] = String(req.body.notice || '').trim();
@@ -108,8 +112,9 @@ router.post('/update-activity', async (req, res) => {
 
     if (req.body.status !== undefined) {
       const status = String(req.body.status).trim();
-      if (!['已发布', '已结束'].includes(status)) {
-        return res.status(400).json({ success: false, error: '状态只能是“已发布”或“已结束”' });
+      // 待审核 = 采集候选；已忽略 = 审核不通过（对学生端均不可见）
+      if (!['已发布', '已结束', '待审核', '已忽略'].includes(status)) {
+        return res.status(400).json({ success: false, error: '状态只能是“已发布 / 已结束 / 待审核 / 已忽略”' });
       }
       fields['状态'] = status;
     }

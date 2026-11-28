@@ -24,10 +24,11 @@
     <!-- 2. 学生端主体（包含顶部主导航与三个功能页面） -->
     <!-- ========================================== -->
     
-    <!-- 学生端主导航（三个 Tab 切换） -->
+    <!-- 学生端主导航（四个 Tab 切换） -->
     <nav class="main-nav" id="mainNav">
         <button id="nav-chat" class="active" onclick="switchMainTab('chat')">智能问答</button>
         <button id="nav-timeline" onclick="switchMainTab('timeline')">活动时间表</button>
+        <button id="nav-schedule" onclick="switchMainTab('schedule')">我的日程</button>
         <button id="nav-review" onclick="switchMainTab('review')">往期回顾</button>
     </nav>
 
@@ -93,9 +94,28 @@
         <div class="page-head">
             <h3>📅 活动时间表</h3>
         </div>
+        <!-- 分类筛选栏：全部 / 志愿服务 / 竞赛活动 / 讲座 / 文体 / 读书（由 app.js 渲染） -->
+        <div id="timelineFilter" class="filter-chips"></div>
         <!-- 时间轴列表容器（数据由 app.js 渲染） -->
         <div id="timelineList" class="timeline-list">
             <div class="loading-state">正在加载活动…</div>
+        </div>
+    </div>
+
+    <!-- Tab2.5：我的日程页面（学生勾选的活动 + ics 导出） -->
+    <div class="main-page" id="page-schedule">
+        <div class="page-head">
+            <h3>🗓️ 我的日程</h3>
+            <p>在「活动时间表」点卡片上的「＋日程」收藏活动；时间冲突会自动提醒，可一键导出到手机/电脑日历。</p>
+        </div>
+        <!-- 工具栏：导出 ics 按钮 + 统计（由 app.js 渲染） -->
+        <div class="schedule-toolbar">
+            <span id="scheduleCount" class="schedule-count"></span>
+            <button type="button" class="export-btn" id="exportIcsBtn" onclick="exportMySchedule()">📅 导出日历 (.ics)</button>
+        </div>
+        <!-- 日程列表容器（数据由 app.js 渲染） -->
+        <div id="scheduleList" class="schedule-list">
+            <div class="loading-state">正在加载我的日程…</div>
         </div>
     </div>
 
@@ -119,6 +139,7 @@
         <nav class="teacher-nav" id="teacherNav">
             <button id="tnav-activity" class="active" onclick="switchTeacherTab('activity')">录入活动</button>
             <button id="tnav-manage" onclick="switchTeacherTab('manage')">活动管理</button>
+            <button id="tnav-collect" onclick="switchTeacherTab('collect')">采集审核</button>
             <button id="tnav-question" onclick="switchTeacherTab('question')">问题回复</button>
         </nav>
 
@@ -129,6 +150,10 @@
                 <!-- 表单字段：活动基础信息 -->
                 <label>活动名称</label>
                 <input type="text" id="act-name" placeholder="如：哲学经典读书会">
+                
+                <label>分类</label>
+                <!-- 分类下拉：与飞书活动表「分类」单选字段对应，选项由 app.js 渲染 -->
+                <select id="act-category" class="category-select"></select>
                 
                 <label>开始时间</label>
                 <input type="datetime-local" id="act-time">
@@ -147,6 +172,16 @@
                 
                 <!-- 提交表单：触发 submitActivity() 上传至飞书 -->
                 <button class="primary" onclick="submitActivity()">提交活动</button>
+            </div>
+
+            <!-- 公众号文章快速填入：粘贴"哲样青春"等推文链接，自动解析标题/内容预填表单 -->
+            <div class="card wx-parse-card">
+                <h3>从公众号文章快速填入</h3>
+                <p class="muted-hint">粘贴公众号推文链接（mp.weixin.qq.com/s/…），系统自动解析标题与正文，填入上方表单后补齐时间地点即可提交。</p>
+                <div class="wx-parse-row">
+                    <input type="text" id="wx-article-url" placeholder="https://mp.weixin.qq.com/s/…">
+                    <button type="button" class="act-open-btn" onclick="parseWechatArticle()">解析填入</button>
+                </div>
             </div>
         </div>
 
@@ -170,7 +205,22 @@
             </div>
         </div>
 
-        <!-- 板块3：问题回复（处理未解答问题） -->
+        <!-- 板块3：采集审核（官网自动采集的候选活动，人工审核后发布） -->
+        <div class="teacher-pane" id="tpane-collect">
+            <div class="card">
+                <h3>采集审核</h3>
+                <p class="muted-hint">系统定时从学院官网等公开渠道自动采集活动（状态为「待审核」），在这里核对/补齐时间地点后「通过发布」，或「忽略」丢弃。发布前学生端不会显示这些活动。</p>
+                <div class="collect-actions">
+                    <button type="button" class="primary" onclick="runCrawlNow(this)">⚡ 立即抓取一次</button>
+                    <button type="button" class="primary" style="background:#94a3b8;" onclick="loadCollectList()">刷新候选列表</button>
+                </div>
+                <div id="collectList">
+                    <div style="color:#999;font-size:13px;">加载中…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 板块4：问题回复（处理未解答问题） -->
         <div class="teacher-pane" id="tpane-question">
             
             <!-- 待回复问题列表 -->
@@ -217,6 +267,11 @@
                         <option value="已发布">已发布</option>
                         <option value="已结束">已结束</option>
                     </select>
+                </div>
+                <div class="act-edit-field span-2">
+                    <label for="modal-act-category">分类</label>
+                    <!-- 分类下拉：选项由 app.js 渲染，写入飞书「分类」单选字段 -->
+                    <select id="modal-act-category" class="category-select"></select>
                 </div>
                 <div class="act-edit-field span-2">
                     <label for="modal-act-place">地点</label>
