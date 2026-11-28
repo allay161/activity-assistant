@@ -222,7 +222,7 @@ async function runCrawl() {
 router.post('/crawl/run', async (req, res) => {
   // 两种合法触发方式：
   // 1) 外部定时触发器：?token=<CRAWL_TOKEN> 或 X-Crawl-Token: <CRAWL_TOKEN>
-  // 2) 老师端页面「立即抓取一次」：X-Teacher-Token（前端已校验口令，这里再核对一次）
+  // 2) 老师端页面「抓取一次」：X-Teacher-Token（前端已校验口令，这里再核对一次）
   // CRAWL_TOKEN 是服务端密钥，不下发到浏览器；老师端按钮不需要知道它。
   const crawlExpect = String(process.env.CRAWL_TOKEN || '');
   const crawlGiven = String(req.query.token || req.headers['x-crawl-token'] || '');

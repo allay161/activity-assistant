@@ -955,7 +955,7 @@ async function loadCollectList() {
     .filter(a => a.status === '待审核')
     .sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
   if (!candidates.length) {
-    box.innerHTML = '<div style="color:#999;font-size:13px;">暂无待审核的采集候选。点上方「立即抓取一次」试试，或等待定时任务运行。</div>';
+    box.innerHTML = '<div style="color:#999;font-size:13px;">暂无待审核的采集候选。点上方「抓取一次」试试，或等待定时任务运行。</div>';
     return;
   }
   box.innerHTML = '';
@@ -1119,7 +1119,7 @@ async function runCrawlNow(btn) {
   } catch (e) {
     toast('抓取失败：' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '⚡ 立即抓取一次'; }
+    if (btn) { btn.disabled = false; btn.textContent = '抓取一次'; }
   }
 }
 
