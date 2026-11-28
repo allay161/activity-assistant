@@ -43,10 +43,13 @@ async function buildContext() {
     let actLines = [];
     try {
       const actRecords = await fetchAllRecords(process.env.FEISHU_TABLE_A, token);
-      actLines = actRecords.map(it => {
-        const f = it.fields || {};
-        return `· ${flat(f["活动名称"])}｜时间：${fmtTs(f["开始时间"])}｜地点：${flat(f["地点"])}｜报名方式：${flat(f["报名方式"])}${flat(f["参与须知"]) ? '｜须知：' + flat(f["参与须知"]) : ''}`;
-      }).filter(s => !s.startsWith('· ｜'));
+      // 只把已发布活动放进 AI 上下文：待审核/已忽略/已结束都不能推荐给学生
+      actLines = actRecords
+        .filter(it => flat(it.fields && it.fields['状态']) === '已发布')
+        .map(it => {
+          const f = it.fields || {};
+          return `· ${flat(f["活动名称"])}｜时间：${fmtTs(f["开始时间"])}｜地点：${flat(f["地点"])}｜报名方式：${flat(f["报名方式"])}${flat(f["参与须知"]) ? '｜须知：' + flat(f["参与须知"]) : ''}`;
+        }).filter(s => !s.startsWith('· ｜'));
     } catch (e) { /* 活动表拉不到不影响问答上下文 */ }
 
     const parts = [];
