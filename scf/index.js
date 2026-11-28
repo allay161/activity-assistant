@@ -11,6 +11,7 @@ const addActivity = require('./routes/addActivity');
 const addUnanswered = require('./routes/addUnanswered');
 const getQuestions = require('./routes/getQuestions');
 const getActivities = require('./routes/getActivities');
+const activityRecord = require('./routes/activityRecord');
 const replyQuestion = require('./routes/replyQuestion');
 const chat = require('./routes/chat');
 
@@ -26,6 +27,7 @@ app.use('/api', addActivity);
 app.use('/api', addUnanswered);
 app.use('/api', getQuestions);
 app.use('/api', getActivities);
+app.use('/api', activityRecord);
 app.use('/api', replyQuestion);
 app.use('/api', chat);
 
