@@ -665,7 +665,9 @@ function resolveConfirm(result) {
 
 /** 全页唯一的【在飞书打开】：用任意活动的深链去掉 record 参数，落到活动表本身。 */
 function openFeishuTable() {
-  const a = activityState.list.find(x => x.feishu_url);
+  // 从完整活动缓存里找链接：即使活动管理页按状态过滤后为空，飞书入口也保持可用。
+  const a = (activitiesCache || []).find(x => x && x.feishu_url)
+    || activityState.list.find(x => x && x.feishu_url);
   if (!a) {
     toast('未配置飞书表格链接，请在后端配置 FEISHU_SHEET_URL');
     return;
@@ -730,8 +732,11 @@ async function loadTeacherActivities() {
   }
   list.innerHTML = '<div style="color:#999;font-size:13px;">加载中…</div>';
   const all = await loadActivities(true); // 强制重新拉取，保证状态是最新的
+  // 活动管理只展示已正式发布的活动：老师从「采集审核」发布的活动、以及在「录入活动」里录入的活动。
+  // 网站抓取但尚未发布的「待审核」候选只在「采集审核」板块处理，「已忽略」的也不在这里展示。
+  const published = all.filter(a => a && (a.status === '已发布' || a.status === '已结束'));
   // 按开始时间倒序，开始时间较晚的活动排在前面。
-  const sorted = all.slice().sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
+  const sorted = published.slice().sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
   activityState.list = sorted;
   activityState.modalRecordId = '';
   activityState.modalOriginal = null;
